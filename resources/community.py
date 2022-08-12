@@ -232,12 +232,6 @@ class PostingInfoResource(Resource) :
     # 커뮤니티 게시글 수정
     @jwt_required()
     def put(self, postingId) :
-        # body에서 전달된 데이터를 처리
-        # {
-        #     "title" : "점심먹자",
-        #     "date" : "2022-06-30 12:30",
-        #     "content" : "점심은 짜장면"
-        # }
         content = request.form['content']
 
         userId = get_jwt_identity()
@@ -245,10 +239,24 @@ class PostingInfoResource(Resource) :
 
         # DB 업데이트 실행코드
         try :
+
             # 데이터 Update
             # 1. DB에 연결
             connection = get_connection()            
             
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from posting
+                    where userId = %s and id = %s;'''
+            record = (userId, postingId)
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {'error' : '잘못된 접근입니다.'}
+
             # 2. 쿼리문 만들기
             query = '''Update posting
                     set content = %s
@@ -262,26 +270,7 @@ class PostingInfoResource(Resource) :
             # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
-            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
-            connection.commit()
-
-
-            # 6. 자원 해제
-            cursor.close()
-            connection.close()
-        except mysql.connector.Error as e :
-            print(e)
-            cursor.close()
-            connection.close()
-            return {"error" : str(e)}, 503
-
-        # 게시글의 이미지 삭제
-        try :
-            # 데이터 Delete
-            # 1. DB에 연결
-            connection = get_connection()
-            
-            # 2. 쿼리문 만들기
+            # 2. 이미지 삭제하기
             query = '''Delete from posting_image
                         where postingId = %s;'''                 
             record = (postingId, )
@@ -292,6 +281,8 @@ class PostingInfoResource(Resource) :
             # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
+
+
             # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
             connection.commit()
 
@@ -303,6 +294,8 @@ class PostingInfoResource(Resource) :
             cursor.close()
             connection.close()
             return {"error" : str(e)}, 503
+
+
 
         
         # 이미지 다시 추가
@@ -342,10 +335,11 @@ class PostingInfoResource(Resource) :
                 # 사진을 DB에 저장
                 try :
                     # 데이터 insert
-                    # 1. DB에 연결
+                    # DB에 연결
                     connection = get_connection()
                     
-                    # 2. 쿼리문 만들기
+                    # 쿼리문 만들기
+                    # 사진을 DB에 저장
                     query = '''insert into images
                             (userId, imageUrl)
                             values
@@ -354,13 +348,30 @@ class PostingInfoResource(Resource) :
                     # recode 는 튜플 형태로 만든다.
                     recode = (userId, file.filename)
 
-                    # 3. 커서를 가져온다.
+                    # 커서를 가져온다.
                     cursor = connection.cursor()
 
-                    # 4. 쿼리문을 커서를 이용해서 실행한다.
+                    # 쿼리문을 커서를 이용해서 실행한다.
                     cursor.execute(query, recode)
 
-                    # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+
+                    # 게시글 사진 id로 저장하기
+                    query = '''insert into posting_image
+                            (postingId, imageId)
+                            values
+                            (%s, %s);'''
+                            
+                    # recode 는 튜플 형태로 만든다.
+                    recode = (postingId, imageId)
+
+                    # 커서를 가져온다.
+                    cursor = connection.cursor()
+
+                    # 쿼리문을 커서를 이용해서 실행한다.
+                    cursor.execute(query, recode)
+
+
+                    # 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
                     connection.commit()
 
                     # 이 포스팅의 아이디 값을 가져온다.
@@ -376,50 +387,132 @@ class PostingInfoResource(Resource) :
                     connection.close()
                     return {"error" : str(e)}, 503
                 
-                # 게시글 사진 id로 저장하기
-                try :
-                    # 데이터 insert
-                    # 1. DB에 연결
-                    connection = get_connection()
-                    
-                    # 2. 쿼리문 만들기
-                    query = '''insert into posting_image
-                            (postingId, imageId)
-                            values
-                            (%s, %s);'''
-                            
-                    # recode 는 튜플 형태로 만든다.
-                    recode = (postingId, imageId)
-
-                    # 3. 커서를 가져온다.
-                    cursor = connection.cursor()
-
-                    # 4. 쿼리문을 커서를 이용해서 실행한다.
-                    cursor.execute(query, recode)
-
-                    # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
-                    connection.commit()
-
-                    # 6. 자원 해제
-                    cursor.close()
-                    connection.close()
-
-                except mysql.connector.Error as e :
-                    print(e)
-                    cursor.close()
-                    connection.close()
-                    return {"error" : str(e)}, 503
 
         return {'result' : 'success'}, 200
 
     # 커뮤니티 게시글 삭제
     @jwt_required()
-    def delete(self) :
-        pass
+    def delete(self, postingId) :
+        try :
+            # 클라이언트로부터 데이터를 받아온다.
+            userId = get_jwt_identity()
+
+            # 데이터 Delete
+            # 1. DB에 연결
+            connection = get_connection()
+
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from posting
+                    where userId = %s and id = %s;'''
+            record = (userId, postingId)
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {'error' : '잘못된 접근입니다.'}
+            
+            # 2. 쿼리문 만들기
+            # 이미지 삭제
+            query = '''Delete from posting_image
+                    where postingId = %s;'''                 
+            record = (postingId,)
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+            # likes 삭제
+            query = '''Delete from likes
+                    where postingId = %s;'''                 
+            record = (postingId,)
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+            # 게시글 삭제
+            query = '''Delete from posting
+                        where id = %s and userId = %s;'''                 
+            record = (postingId, userId)
+
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+        
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+
+        return {'result' : 'success'}, 200
 
     # 특정 커뮤니티 게시글 가져오기
-    def get(self) :
-        pass
+    def get(self, postingId) :
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''select p.id, p.userId, p.content, p.viewCount, i.imageUrl, p.createdAt 
+                    from posting p
+                    left join posting_image pi
+                    on p.id = pi.postingId
+                    left join images i
+                    on pi.ImageId = i.id
+                    having id = %s;'''            
+            record = (postingId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0
+            
+            cnt = 0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()             
+                i = i+1
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
 
 class PostingCommentResource(Resource) :
     # 커뮤니티 게시글 댓글 달기
