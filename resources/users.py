@@ -239,13 +239,13 @@ class UserEditResource(Resource) :
 
         return {'result' : 'success'}, 200
 
-class UserTownResource(Resource) :
+class UserLocationResource(Resource) :
     @jwt_required()
     # 우리 동네 설정하기
     def post(self) :
         pass
 
-class UserInterestItemResource(Resource) :
+class UserWishlistResource(Resource) :
     @jwt_required()
     # 내 관심 상품 가져오기
     def get(self) :
@@ -257,7 +257,7 @@ class UserLikesPostingResource(Resource) :
     def get(self) :
         pass
 
-class UserPurchaseResource(Resource) :
+class UserBuyResource(Resource) :
     @jwt_required()
     # 구매내역 가져오기
     def get(self) :

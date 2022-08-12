@@ -14,34 +14,35 @@ class GoodsListResource(Resource) :
     def get(self) :
         pass
 
-class GoodsWriteResource(Resource) :
-     @jwt_required()
-     # 빌려주기 글 작성
-     def post(self) :
+    @jwt_required()
+    # 빌려주기 글 작성
+    def post(self) :
         pass
 
-class GoodsUpdateResource(Resource) :
-     @jwt_required()
-     # 빌려주기 글 수정
-     def put(self) :
+class GoodsPostingResource(Resource) :
+    @jwt_required()
+    # 빌려주기 글 수정
+    def put(self) :
         pass
 
-class GoodsDeleteResource(Resource) :
-     @jwt_required()
-     # 빌려주기 글 삭제
-     def delete(self) :
+    @jwt_required()
+    # 빌려주기 글 삭제
+    def delete(self) :
+        pass
+    
+    # 특정 빌려주기글 가져오기
+    def get(self) :
         pass
 
 class GoodsCommentResource(Resource) :
-     @jwt_required()
-     # 빌려주기 글에 댓글 달기
-     def post(self) :
+    @jwt_required()
+    # 빌려주기 글에 댓글 달기
+    def post(self) :
         pass
 
-class GoodsCommentDeleteResource(Resource) :
-     @jwt_required()
-     # 빌려주기 글에 댓글 삭제
-     def delete(self) :
+    @jwt_required()
+    # 빌려주기 글에 댓글 삭제
+    def delete(self) :
         pass
 
 class GoodsReviewResource(Resource) :
@@ -51,29 +52,24 @@ class GoodsReviewResource(Resource) :
         pass
 
 class GoodsInterestItemResource(Resource) :
-    @jwt_required()
-    # 관심 상품 등록
-    def post(self) :
+     @jwt_required()
+     # 관심 상품 등록
+     def post(self) :
         pass
 
-class GoodsInterestItemDeleteResource(Resource) :
-    @jwt_required()
-    # 관심 상품 등록 해제
-    def delete(self) :
+     @jwt_required()
+     # 관심 상품 해제
+     def delete(self) :
         pass
 
-class GoodsRecommendPostingResource(Resource) :
-    @jwt_required()
-    # 추천하는 빌려주기 글 가져오기
-    def get(self) :
+class GoodsRecommendResource(Resource) :
+     @jwt_required()
+     # 추천하는 빌려주기 글 가져오기
+     def get(self) :
         pass
 
 class GoodsCategoryResource(Resource) :
-    # 카테고리 목록 가져오기
-    def get(self) :
-        pass
-
-class GoodsSpecificPostingResource(Resource) :
-    # 특정 빌려주기 글 가져오기
-    def get(self) :
+     @jwt_required()
+     # 카테고리 목록 가져오기
+     def get(self) :
         pass
