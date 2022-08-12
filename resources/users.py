@@ -177,7 +177,6 @@ class UserLoginResource(Resource) :
                 'access_token' : access_token}, 200
 
 jwt_blacklist = set()
-
 class UserLogoutResource(Resource) :
     @jwt_required()
     # 로그아웃하기
@@ -193,7 +192,7 @@ class UserLogoutResource(Resource) :
 class UserEditResource(Resource) :
     @jwt_required()
     # 내 정보 수정하기
-    def put(self):
+    def put(self) :
         # 1. 클라이언트로부터 데이터를 받아온다.
         # {
         #     "title": "점심먹자",
@@ -240,3 +239,32 @@ class UserEditResource(Resource) :
 
         return {'result' : 'success'}, 200
 
+class UserTownResource(Resource) :
+    @jwt_required()
+    # 우리 동네 설정하기
+    def post(self) :
+        pass
+
+class UserInterestItemResource(Resource) :
+    @jwt_required()
+    # 내 관심 상품 가져오기
+    def get(self) :
+        pass
+
+class UserLikesPostingResource(Resource) :
+    @jwt_required()
+    # 내가 좋아요 누른 게시물 가져오기
+    def get(self) :
+        pass
+
+class UserPurchaseResource(Resource) :
+    @jwt_required()
+    # 구매내역 가져오기
+    def get(self) :
+        pass
+
+class UserSaleResource(Resource) :
+    @jwt_required()
+    # 판매내역 가져오기
+    def get(self) :
+        pass
