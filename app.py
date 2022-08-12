@@ -2,6 +2,8 @@ from flask import Flask
 from flask_restful import Api
 from config import Config
 from flask_jwt_extended import JWTManager
+from resources.chat import ChatRoomResource
+from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource
 
 from resources.users import UserEditResource, UserLoginResource, UserLogoutResource, UserRegisterResource, jwt_blacklist
 
@@ -27,5 +29,13 @@ api.add_resource(UserLoginResource, '/users/login')
 api.add_resource(UserLogoutResource, '/users/logout')
 api.add_resource(UserEditResource, '/users/edit')
 
+# community
+api.add_resource(PostingListResource, '/community')
+api.add_resource(PostingInfoResource, '/community/<int:postingId>')
+api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment')
+api.add_resource(PostingLikesResource, '/community/<int:postingId>/likes')
+
+# chat
+api.add_resource(ChatRoomResource, '/community/<int:postingId>/likes')
 if __name__ == '__main__' :
     app.run()
