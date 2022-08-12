@@ -1,8 +1,6 @@
 from flask_restful import Resource
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-
-
 class ChatRoomResource(Resource) :
     # 내가 속한 채팅방 가져오기
     @jwt_required()
