@@ -5,7 +5,7 @@ from flask_jwt_extended import JWTManager
 from resources.chat import ChatRoomResource
 from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource
 
-from resources.users import UserEditResource, UserLoginResource, UserLogoutResource, UserRegisterResource, jwt_blacklist
+from resources.users import UserEditResource, UserLikesPostingResource, UserLoginResource, UserLogoutResource, UserRegisterResource, jwt_blacklist
 
 app = Flask(__name__)
 
@@ -23,11 +23,12 @@ def check_if_token_is_revoked(jwt_header, jwt_payload):
 
 api = Api(app)
 
-# 경로와 리소스(API 코드)를 연결한다.
+# users
 api.add_resource(UserRegisterResource, '/users/register')
 api.add_resource(UserLoginResource, '/users/login')
 api.add_resource(UserLogoutResource, '/users/logout')
 api.add_resource(UserEditResource, '/users/edit')
+api.add_resource(UserLikesPostingResource, '/users/likes')
 
 # community
 api.add_resource(PostingListResource, '/community')
