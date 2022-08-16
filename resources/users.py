@@ -249,7 +249,48 @@ class UserWishlistResource(Resource) :
     @jwt_required()
     # 내 관심 상품 가져오기
     def get(self) :
-        pass
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        user_id = get_jwt_identity()
+
+        try :
+            connection = get_connection()
+
+            query = '''select w.userId, w.goodsId, g.sellerId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
+                    from goods g
+                    join wish_lists w
+                        on g.id = w.goodsId
+                        where w.userId = %s;'''
+            
+            record = (user_id, )
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            result_list = cursor.fetchall()
+
+            print(result_list)
+
+            i = 0
+            for record in result_list :
+                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+                i = i + 1
+
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+
+            return {"error" : str(e), 'error_no' : 20}, 503
+
+        return {'result' : 'success', 
+                'count' : len(result_list),
+                'items' : result_list}, 200
 
 class UserLikesPostingResource(Resource) :
     @jwt_required()
@@ -307,10 +348,93 @@ class UserBuyResource(Resource) :
     @jwt_required()
     # 구매내역 가져오기
     def get(self) :
-        pass
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        user_id = get_jwt_identity()
+
+        try :
+            connection = get_connection()
+
+            query = '''select u.name, g.categoriId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status, e.score
+                    from users u
+                    join goods g
+                        on u.id = g.sellerId
+                    join evaluation_items e
+                        on g.id = e.goodsId
+                    where u.id = %s and status != 2;'''
+            
+            record = (user_id, )
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            result_list = cursor.fetchall()
+
+            print(result_list)
+
+            i = 0
+            for record in result_list :
+                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+                i = i + 1
+
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+
+            return {"error" : str(e), 'error_no' : 20}, 503
+
+        return {'result' : 'success', 
+                'count' : len(result_list),
+                'items' : result_list}, 200
 
 class UserSaleResource(Resource) :
     @jwt_required()
     # 판매내역 가져오기
     def get(self) :
-        pass
+        user_id = get_jwt_identity()
+
+        try :
+            connection = get_connection()
+
+            query = '''select u.name, g.categoriId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
+                    from users u
+                    join goods g
+                        on u.id = g.sellerId
+                    where u.id = %s and status = 2;'''
+            
+            record = (user_id, )
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            result_list = cursor.fetchall()
+
+            print(result_list)
+
+            i = 0
+            for record in result_list :
+                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+                i = i + 1
+
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+
+            return {"error" : str(e), 'error_no' : 20}, 503
+
+        return {'result' : 'success', 
+                'count' : len(result_list),
+                'items' : result_list}, 200

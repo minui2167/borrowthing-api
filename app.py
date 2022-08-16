@@ -5,7 +5,7 @@ from flask_jwt_extended import JWTManager
 from resources.chat import ChatRoomResource
 from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource
 
-from resources.users import UserEditResource, UserLikesPostingResource, UserLoginResource, UserLogoutResource, UserRegisterResource, jwt_blacklist
+from resources.users import UserBuyResource, UserEditResource, UserLikesPostingResource, UserLoginResource, UserLogoutResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
 
 app = Flask(__name__)
 
@@ -29,6 +29,9 @@ api.add_resource(UserLoginResource, '/users/login')
 api.add_resource(UserLogoutResource, '/users/logout')
 api.add_resource(UserEditResource, '/users/edit')
 api.add_resource(UserLikesPostingResource, '/users/likes')
+api.add_resource(UserWishlistResource, '/users/wishlist')
+api.add_resource(UserBuyResource, '/users/buy')
+api.add_resource(UserSaleResource, '/users/sale')
 
 # community
 api.add_resource(PostingListResource, '/community')
