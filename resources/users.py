@@ -40,9 +40,9 @@ class UserRegisterResource(Resource) :
             return {'error' : '비밀번호 길이를 확인하세요'}, 400
 
         # 4. 비밀번호를 암호화 한다.
-        hashed_password = hash_password( data['password'] )
+        hashedPassword = hash_password( data['password'] )
 
-        print(hashed_password)
+        print(hashedPassword)
 
         # 5. 데이터베이스에 회원정보를 저장한다!!
         try :
@@ -56,7 +56,7 @@ class UserRegisterResource(Resource) :
                     values
                     (%s, %s , %s, %s, %s);'''
             
-            record = (data['email'], hashed_password, data['name'],
+            record = (data['email'], hashedPassword, data['name'],
             data['phoneNumber'], data['nickname'])
 
             # 5-2. 커서를 가져온다.
@@ -192,9 +192,9 @@ class UserEditResource(Resource) :
         #     "content": "짜장면"
         # }
         data = request.get_json()
-        user_id = get_jwt_identity()
+        userId = get_jwt_identity()
 
-        hashed_password = hash_password( data['password'] )
+        hashedPassword = hash_password( data['password'] )
 
         # 2. 디비 업데이트
         try :
@@ -207,7 +207,7 @@ class UserEditResource(Resource) :
                     set nickname = %s, password = %s
                     where id = %s;'''
             
-            record = (data["nickname"], hashed_password, user_id)
+            record = (data["nickname"], hashedPassword, userId)
 
             # 3. 커서를 가져온다.
             cursor = connection.cursor()
@@ -235,14 +235,52 @@ class UserLocationResource(Resource) :
     @jwt_required()
     # 우리 동네 설정하기
     def post(self) :
-        pass
+        data = request.get_json()
+        userId = get_jwt_identity()
+
+        try :
+            # 데이터 insert 
+            # 1. DB에 연결
+            connection = get_connection()
+
+            # 5-1. 쿼리문 만들기
+            query = '''insert into activity_areas
+                    (emdId, userId)
+                    values
+                    (%s, %s)'''
+            
+            record = (data["emdId"], userId)
+
+            # 5-2. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 5-3. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5-4. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 5-5. 디비에 저장된 아이디값 가져오기.
+            userId = cursor.lastrowid
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+
+        return {'result' : 'success'}, 200
 
 class UserWishlistResource(Resource) :
     @jwt_required()
     # 내 관심 상품 가져오기
     def get(self) :
         # 1. 클라이언트로부터 데이터를 받아온다.
-        user_id = get_jwt_identity()
+        userId = get_jwt_identity()
 
         try :
             connection = get_connection()
@@ -253,7 +291,7 @@ class UserWishlistResource(Resource) :
                         on g.id = w.goodsId
                         where w.userId = %s;'''
             
-            record = (user_id, )
+            record = (userId, )
 
             # select 문은, dictionary = True 를 해준다.
             cursor = connection.cursor(dictionary = True)
@@ -289,7 +327,7 @@ class UserLikesPostingResource(Resource) :
     # 내가 좋아요 누른 게시물 가져오기
     def get(self) :
         # 1. 클라이언트로부터 데이터를 받아온다.
-        user_id = get_jwt_identity()
+        userId = get_jwt_identity()
 
         try :
             connection = get_connection()
@@ -301,7 +339,7 @@ class UserLikesPostingResource(Resource) :
                         on l.postingId = p.id
                     where l.userId = %s;'''
             
-            record = (user_id, )
+            record = (userId, )
 
             # select 문은, dictionary = True 를 해준다.
             cursor = connection.cursor(dictionary = True)
@@ -341,7 +379,7 @@ class UserBuyResource(Resource) :
     # 구매내역 가져오기
     def get(self) :
         # 1. 클라이언트로부터 데이터를 받아온다.
-        user_id = get_jwt_identity()
+        userId = get_jwt_identity()
 
         try :
             connection = get_connection()
@@ -354,7 +392,7 @@ class UserBuyResource(Resource) :
                         on g.id = e.goodsId
                     where u.id = %s and status != 2;'''
             
-            record = (user_id, )
+            record = (userId, )
 
             # select 문은, dictionary = True 를 해준다.
             cursor = connection.cursor(dictionary = True)
@@ -389,7 +427,7 @@ class UserSaleResource(Resource) :
     @jwt_required()
     # 판매내역 가져오기
     def get(self) :
-        user_id = get_jwt_identity()
+        userId = get_jwt_identity()
 
         try :
             connection = get_connection()
@@ -401,7 +439,7 @@ class UserSaleResource(Resource) :
                     where u.id = %s and status = 2;
                     '''
             
-            record = (user_id, )
+            record = (userId, )
 
             # select 문은, dictionary = True 를 해준다.
             cursor = connection.cursor(dictionary = True)
