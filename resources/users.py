@@ -354,7 +354,7 @@ class UserBuyResource(Resource) :
         try :
             connection = get_connection()
 
-            query = '''select u.name, g.categoriId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status, e.score
+            query = '''select u.nickname, g.categoriId, g.sellerId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status, e.score
                     from users u
                     join goods g
                         on u.id = g.sellerId
@@ -402,11 +402,12 @@ class UserSaleResource(Resource) :
         try :
             connection = get_connection()
 
-            query = '''select u.name, g.categoriId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
+            query = '''select u.nickname, g.categoriId, g.sellerId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
                     from users u
                     join goods g
                         on u.id = g.sellerId
-                    where u.id = %s and status = 2;'''
+                    where u.id = %s and status = 2;
+                    '''
             
             record = (user_id, )
 
