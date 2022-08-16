@@ -169,7 +169,7 @@ class UserLoginResource(Resource) :
         check = check_password(data['password'] , user_info['password'])
 
         if check == False :
-            return {'error' : '비밀번호가 맞지 않습니다.'}
+            return {'error' : '비밀번호가 맞지 않습니다.'}, 400
 
         access_token = create_access_token( user_info['id'])
 

@@ -36,7 +36,7 @@ api.add_resource(UserSaleResource, '/users/sale')
 # community
 api.add_resource(PostingListResource, '/community')
 api.add_resource(PostingInfoResource, '/community/<int:postingId>')
-api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment')
+api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment/<int:commentId>')
 api.add_resource(PostingLikesResource, '/community/<int:postingId>/likes')
 
 # chat
