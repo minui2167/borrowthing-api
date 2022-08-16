@@ -560,18 +560,160 @@ class PostingInfoResource(Resource) :
 class PostingCommentResource(Resource) :
     # 커뮤니티 게시글 댓글 달기
     @jwt_required()
-    def post(self) :
-        pass
+    def post(self, postingId) :
+
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        userId = get_jwt_identity()
+
+        data = request.get_json()
+
+        # 게시물 작성
+        # 3. DB에 저장
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''insert into posting_comments
+                    (postingId, userId, comment)
+                    values
+                    ({}, %s, %s);'''.format(postingId)
+                    
+            # recode 는 튜플 형태로 만든다.
+            recode = (userId, data['comment'])
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, recode)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+            
+        return {"result" : "success"}, 200
 
     # 커뮤니티 게시글 댓글 수정
     @jwt_required()
-    def put(self) :
-        pass
+    def put(self, postingId, commentId) :
+
+        userId = get_jwt_identity()
+        data = request.get_json()
+
+
+        # DB 업데이트 실행코드
+        try :
+
+            # 데이터 Update
+            # 1. DB에 연결
+            connection = get_connection()            
+            
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from posting_comments
+                    where userId = %s and postingId = %s;'''
+            record = (userId, postingId)
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {'error' : '잘못된 접근입니다.'}
+
+            # 2. 쿼리문 만들기
+            query = '''Update posting_comments
+                    set comment = %s
+                    where id = {} and userId = %s;'''.format(commentId)                 
+
+            record = (data['comment'], userId)
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+        return {"result" : "success"}, 400
 
     # 커뮤니티 게시글 댓글 삭제
     @jwt_required()
-    def delete(self) :
-        pass
+    def delete(self, postingId, commentId) :
+        try :
+            # 클라이언트로부터 데이터를 받아온다.
+            userId = get_jwt_identity()
+
+            # 데이터 Delete
+            # 1. DB에 연결
+            connection = get_connection()
+
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from posting_comments
+                    where userId = %s and id = %s and postingId = %s ;'''
+            record = (userId, commentId, postingId)
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {'error' : '잘못된 접근입니다.'}
+
+            # 게시글 삭제
+            query = '''Delete from posting_comments
+                        where id = %s and userId = %s;'''                 
+            record = (commentId, userId)
+
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+        
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+
+        return {'result' : 'success'}, 200
 
     # 커뮤니티 게시글 댓글 목록
     def get(self) :
