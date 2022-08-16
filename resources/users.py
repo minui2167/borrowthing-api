@@ -72,12 +72,12 @@ class UserRegisterResource(Resource) :
             user_id = cursor.lastrowid
 
             # 6. 데이터 가져오기
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
             # 6-1. 문자열로 바꿔서 다시 저장하기
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             # 6. 자원 해제
@@ -89,14 +89,6 @@ class UserRegisterResource(Resource) :
             cursor.close()
             connection.close()
             return {"error" : str(e)}, 503
-
-        # user_id 를 바로 보내면 안되고,
-        # JWT 로 암호화 해서 보내준다.
-        # 암호화 하는 방법
-
-        # 억세스 토큰 만료기간 설정하는 방법
-        access_token = create_access_token(user_id, 
-                        expires_delta=datetime.timedelta(minutes=1))
 
         return {'result' : 'success'}, 200
 
@@ -129,17 +121,17 @@ class UserLoginResource(Resource) :
             cursor.execute(query, record)
 
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
-            print(result_list)
+            print(resultList)
 
             # 중요! 디비에서 가져온 timestamp 는 
             # 파이썬의 datetime 으로 자동 변경된다.
             # 문제는! 이데이터를 json 으로 바로 보낼수 없으므로,
             # 문자열로 바꿔서 다시 저장해서 보낸다.
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             cursor.close()
@@ -158,11 +150,11 @@ class UserLoginResource(Resource) :
         # 행의 갯수가 0이면, 요청한 이메일은, 회원가입이
         # 되어 있지 않은 이메일이다.
 
-        if len(result_list) != 1 :
+        if len(resultList) != 1 :
             return {'error' : '등록되어 있지 않은 이메일입니다.'}, 400
 
         # 4. 비밀번호가 맞는지 확인한다.
-        user_info = result_list[0]
+        user_info = resultList[0]
 
         # data['password'] 와 user_info['password']를 비교
 
@@ -171,10 +163,10 @@ class UserLoginResource(Resource) :
         if check == False :
             return {'error' : '비밀번호가 맞지 않습니다.'}, 400
 
-        access_token = create_access_token( user_info['id'])
+        accessToken = create_access_token( user_info['id'])
 
         return {'result' : 'success', 
-                'access_token' : access_token}, 200
+                'access_token' : accessToken}, 200
 
 jwt_blacklist = set()
 class UserLogoutResource(Resource) :
@@ -269,13 +261,13 @@ class UserWishlistResource(Resource) :
             cursor.execute(query, record)
 
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
-            print(result_list)
+            print(resultList)
 
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             cursor.close()
@@ -289,8 +281,8 @@ class UserWishlistResource(Resource) :
             return {"error" : str(e), 'error_no' : 20}, 503
 
         return {'result' : 'success', 
-                'count' : len(result_list),
-                'items' : result_list}, 200
+                'count' : len(resultList),
+                'items' : resultList}, 200
 
 class UserLikesPostingResource(Resource) :
     @jwt_required()
@@ -317,17 +309,17 @@ class UserLikesPostingResource(Resource) :
             cursor.execute(query, record)
 
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
-            print(result_list)
+            print(resultList)
 
             # 중요! 디비에서 가져온 timestamp 는 
             # 파이썬의 datetime 으로 자동 변경된다.
             # 문제는! 이데이터를 json 으로 바로 보낼수 없으므로,
             # 문자열로 바꿔서 다시 저장해서 보낸다.
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             cursor.close()
@@ -341,8 +333,8 @@ class UserLikesPostingResource(Resource) :
             return {"error" : str(e), 'error_no' : 20}, 503
 
         return {'result' : 'success', 
-                'count' : len(result_list),
-                'items' : result_list}, 200
+                'count' : len(resultList),
+                'items' : resultList}, 200
 
 class UserBuyResource(Resource) :
     @jwt_required()
@@ -370,13 +362,13 @@ class UserBuyResource(Resource) :
             cursor.execute(query, record)
 
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
-            print(result_list)
+            print(resultList)
 
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             cursor.close()
@@ -390,8 +382,8 @@ class UserBuyResource(Resource) :
             return {"error" : str(e), 'error_no' : 20}, 503
 
         return {'result' : 'success', 
-                'count' : len(result_list),
-                'items' : result_list}, 200
+                'count' : len(resultList),
+                'items' : resultList}, 200
 
 class UserSaleResource(Resource) :
     @jwt_required()
@@ -417,13 +409,13 @@ class UserSaleResource(Resource) :
             cursor.execute(query, record)
 
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
-            result_list = cursor.fetchall()
+            resultList = cursor.fetchall()
 
-            print(result_list)
+            print(resultList)
 
             i = 0
-            for record in result_list :
-                result_list[i]['createdAt'] = record['createdAt'].isoformat()
+            for record in resultList :
+                resultList[i]['createdAt'] = record['createdAt'].isoformat()
                 i = i + 1
 
             cursor.close()
@@ -437,5 +429,5 @@ class UserSaleResource(Resource) :
             return {"error" : str(e), 'error_no' : 20}, 503
 
         return {'result' : 'success', 
-                'count' : len(result_list),
-                'items' : result_list}, 200
+                'count' : len(resultList),
+                'items' : resultList}, 200
