@@ -1,5 +1,4 @@
 from datetime import datetime
-from os import remove
 from flask_restful import Resource
 from flask import request
 from mysql_connection import get_connection
