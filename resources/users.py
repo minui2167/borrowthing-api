@@ -150,7 +150,7 @@ class UserLoginResource(Resource) :
             cursor.close()
             connection.close()
 
-            return {"error" : str(e)}, 503
+            return {"error" : str(e)}, 400
 
         
         # 3. result_list 의 행의 갯수가 1개이면,
