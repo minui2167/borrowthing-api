@@ -33,6 +33,8 @@ api.add_resource(UserWishlistResource, '/users/wishlist')
 api.add_resource(UserBuyResource, '/users/buy')
 api.add_resource(UserSaleResource, '/users/sale')
 api.add_resource(UserLocationResource, '/users/location')
+api.add_resource(UserCommunityCommentResource, '/users/community/comment')
+api.add_resource(UserGoodsCommentResource, '/users/goods/comment')
 
 
 # community
