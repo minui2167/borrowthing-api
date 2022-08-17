@@ -277,31 +277,9 @@ class GoodsCommentResource(Resource) :
     def delete(self) :
         pass
 
-class GoodsReviewResource(Resource) :
-     @jwt_required()
-     # 거래 후기 작성
-     def post(self) :
-        pass
-
-class GoodsInterestItemResource(Resource) :
-     @jwt_required()
-     # 관심 상품 등록
-     def post(self) :
-        pass
-
-     @jwt_required()
-     # 관심 상품 해제
-     def delete(self) :
-        pass
 
 class GoodsRecommendResource(Resource) :
      @jwt_required()
      # 추천하는 빌려주기 글 가져오기
-     def get(self) :
-        pass
-
-class GoodsCategoryResource(Resource) :
-     @jwt_required()
-     # 카테고리 목록 가져오기
      def get(self) :
         pass
