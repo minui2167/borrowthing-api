@@ -104,6 +104,7 @@ class GoodsListResource(Resource) :
         content = request.form['content']
         price = request.form['price']
         rentalPeriod = request.form['rentalPeriod']
+        categoriId = request.form['categoriId']
 
         # 게시물 작성
         # 3. DB에 저장
@@ -113,13 +114,13 @@ class GoodsListResource(Resource) :
             connection = get_connection()
             
             # 2. 쿼리문 만들기
-            query = '''insert into posting
-                    (title, content, price, rentalPeriod)
+            query = '''insert into goods
+                    (title, content, price, rentalPeriod, categoriId, sellerId)
                     values
-                    (%s, %s, %s, %s);'''
+                    (%s, %s, %s, %s, %s, %s);'''
                     
             # recode 는 튜플 형태로 만든다.
-            recode = (title, content, price, rentalPeriod)
+            recode = (title, content, price, rentalPeriod, categoriId, userId)
 
             # 3. 커서를 가져온다.
             cursor = connection.cursor()
