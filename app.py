@@ -46,7 +46,7 @@ api.add_resource(GoodsRecommendResource, '/goods/recommend')
 
 # goods 샘찬
 api.add_resource(GoodsCategoryResource, '/categories')
-api.add_resource(GoodsReviewResource, '/evaluation/<int:postingId>')
+api.add_resource(GoodsReviewResource, '/evaluation/<int:goodsId>')
 api.add_resource(GoodsInterestItemResource, '/goods/<int:goodsId>/wish')
 
 # community
