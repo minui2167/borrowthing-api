@@ -251,8 +251,6 @@ class GoodsListResource(Resource) :
             
         return {"result" : "success"}, 200
 
-
-
 class GoodsCommentResource(Resource) :
     @jwt_required()
     # 빌려주기 글에 댓글 달기
@@ -263,7 +261,6 @@ class GoodsCommentResource(Resource) :
     # 빌려주기 글에 댓글 삭제
     def delete(self) :
         pass
-
 
 class GoodsRecommendResource(Resource) :
      @jwt_required()
