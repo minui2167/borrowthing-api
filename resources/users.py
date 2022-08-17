@@ -185,12 +185,7 @@ class UserEditResource(Resource) :
     @jwt_required()
     # 내 정보 수정하기
     def put(self) :
-        # 1. 클라이언트로부터 데이터를 받아온다.
-        # {
-        #     "title": "점심먹자",
-        #     "date": "2022-07-10 14:00",
-        #     "content": "짜장면"
-        # }
+        
         data = request.get_json()
         userId = get_jwt_identity()
 
@@ -227,7 +222,6 @@ class UserEditResource(Resource) :
             cursor.close()
             connection.close()
             return {'error' : str(e)}, 503
-
 
         return {'result' : 'success'}, 200
 
