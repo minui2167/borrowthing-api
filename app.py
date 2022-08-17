@@ -3,7 +3,7 @@ from flask_restful import Api
 from config import Config
 from flask_jwt_extended import JWTManager
 from resources.chat import ChatRoomResource
-from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource
+from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource, PostingCommentInfoResource
 
 from resources.users import UserBuyResource, UserEditResource, UserLikesPostingResource, UserLocationResource, UserLoginResource, UserLogoutResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
 
@@ -37,7 +37,8 @@ api.add_resource(UserLocationResource, '/users/location')
 # community
 api.add_resource(PostingListResource, '/community')
 api.add_resource(PostingInfoResource, '/community/<int:postingId>')
-api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment/<int:commentId>')
+api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment')
+api.add_resource(PostingCommentInfoResource,'/community/<int:postingId>/comment/<int:commentId>')
 api.add_resource(PostingLikesResource, '/community/<int:postingId>/likes')
 
 # chat
