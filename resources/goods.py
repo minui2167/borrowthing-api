@@ -251,20 +251,7 @@ class GoodsListResource(Resource) :
             
         return {"result" : "success"}, 200
 
-class GoodsPostingResource(Resource) :
-    @jwt_required()
-    # 빌려주기 글 수정
-    def put(self) :
-        pass
 
-    @jwt_required()
-    # 빌려주기 글 삭제
-    def delete(self) :
-        pass
-    
-    # 특정 빌려주기글 가져오기
-    def get(self) :
-        pass
 
 class GoodsCommentResource(Resource) :
     @jwt_required()
