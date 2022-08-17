@@ -591,6 +591,65 @@ class PostingCommentResource(Resource) :
             
         return {"result" : "success"}, 200
 
+    # 커뮤니티 게시글 댓글 목록
+    def get(self, postingId) :
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 댓글 가져오기         
+            query = '''select * from posting_comments
+                    where postingId = %s
+                    limit {}, {};'''.format(offset, limit) 
+            
+            record = (postingId, )
+
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0
+            
+        
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+                i = i+1      
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503       
+        
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
+
+class PostingCommentInfoResource(Resource) :
     # 커뮤니티 게시글 댓글 수정
     @jwt_required()
     def put(self, postingId, commentId) :
@@ -701,21 +760,139 @@ class PostingCommentResource(Resource) :
 
         return {'result' : 'success'}, 200
 
-    # 커뮤니티 게시글 댓글 목록
-    def get(self) :
-        pass
+    
 
 class PostingLikesResource(Resource) :
     # 커뮤니티 게시글 좋아요 등록
     @jwt_required()
-    def post(self) :
-        pass
+    def post(self, postingId) :
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        userId = get_jwt_identity()
+
+
+        # 좋아요 등록
+        # 3. DB에 저장
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''insert into likes
+                    (userId, postingId)
+                    values
+                    (%s, %s);'''
+                    
+            # recode 는 튜플 형태로 만든다.
+            recode = (userId, postingId)
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, recode)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+        return {"result" : "success"}, 200
 
     # 커뮤니티 게시글 좋아요 해제
     @jwt_required()
-    def delete(self) :
-        pass
+    def delete(self, postingId) :
+        try :
+            # 클라이언트로부터 데이터를 받아온다.
+            userId = get_jwt_identity()
+
+            # 데이터 Delete
+            # 1. DB에 연결
+            connection = get_connection()
+
+
+            # 좋아요 해제
+            query = '''Delete from likes
+                        where userId = %s and postingId = %s;'''                 
+            record = (userId, postingId)
+
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+
+        return {'result' : 'success'}, 200
 
     # 커뮤니티 게시글 좋아요 누른 사람 목록
-    def get(self) :
-        pass
+    def get(self, postingId) :
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 댓글 가져오기         
+            query = '''select * from likes
+                    where postingId = %s
+                    limit {}, {};'''.format(offset, limit) 
+            
+            record = (postingId, )
+
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503       
+        
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
