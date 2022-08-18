@@ -7,7 +7,7 @@ from resources.community import PostingCommentResource, PostingInfoResource, Pos
 from resources.goods import GoodsCommentResource, GoodsListResource, GoodsPostingResource, GoodsRecommendResource
 from resources.goods2 import GoodsCategoryResource, GoodsInterestItemResource, GoodsReviewResource
 
-from resources.users import UserBuyResource, UserCommunityCommentResource, UserEditResource, UserGoodsCommentResource, UserLikesPostingResource, UserLocationResource, UserLoginResource, UserLogoutResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
+from resources.users import UserActivityAreaResource, UserBuyResource, UserBuyingResource, UserCommunityCommentResource, UserEditResource, UserGoodsCommentResource, UserLikesPostingResource, UserLocationResource, UserLoginResource, UserLogoutResource, UserPurchaseCompleteResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
 
 app = Flask(__name__)
 
@@ -37,6 +37,10 @@ api.add_resource(UserSaleResource, '/users/sale')
 api.add_resource(UserLocationResource, '/users/location')
 api.add_resource(UserCommunityCommentResource, '/users/community/comment')
 api.add_resource(UserGoodsCommentResource, '/users/goods/comment')
+api.add_resource(UserActivityAreaResource, '/users/location/distance')
+api.add_resource(UserBuyingResource, '/users/goods/ing')
+api.add_resource(UserPurchaseCompleteResource, '/users/goods/end')
+
 
 # goods 윤식
 api.add_resource(GoodsListResource, '/goods')
