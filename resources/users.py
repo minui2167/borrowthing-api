@@ -271,8 +271,44 @@ class UserLocationResource(Resource) :
     
     # 우리 동네 불러오기
     @jwt_required()
-    def put(self, userId):
-        pass
+    def get(self):
+        userId = get_jwt_identity()
+
+        try :
+            connection = get_connection()
+
+            query = '''select aa.userId, aa.emdId, aa.activityMeters, sda.name sido, sga.name sigg, ea.name emd
+                    from activity_areas aa
+                    join emd_areas ea
+                    on aa.emdId = ea.id
+                    join sigg_areas sga
+                    on ea.siggAreaId = sga.id
+                    join sido_areas sda
+                    on sga.sidoAreaId = sda.id
+                    where userId = %s;'''
+            
+            record = (userId, )
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            items = cursor.fetchall()
+
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+
+            return {"error" : str(e), 'error_no' : 20}, 503
+
+        return {'result' : 'success', 
+                'items' : items}, 200
 
 class UserWishlistResource(Resource) :
     @jwt_required()
@@ -473,7 +509,59 @@ class UserGoodsCommentResource(Resource) :
     @jwt_required()
     # 내가 쓴 빌려주기 게시글 댓글 목록
     def get(self) :
-        pass
+        userId = get_jwt_identity()
+
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        try :
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 댓글 가져오기         
+            query = '''select gc.id commentId, gc.userId, gc.comment, gc.createdAt,
+                    g.id postingId, g.sellerId authorId, g.content
+                    from goods_comments gc
+                    join goods g
+                    on gc.goodsId = g.id
+                    having gc.userId = %s
+                    limit {}, {};'''.format(offset, limit) 
+            
+            record = (userId, )
+
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+
+            i = 0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+                i = i + 1
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503       
+        
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
 
 class UserCommunityCommentResource(Resource) :
     @jwt_required()
@@ -494,7 +582,7 @@ class UserCommunityCommentResource(Resource) :
 
             # 댓글 가져오기         
             query = '''select pc.id commentsId, pc.userId, pc.comment, pc.createdAt,
-                    p.id postingId, p.id sellerId, p.content
+                    p.id postingId, p.userId authorId, p.content
                     from posting_comments pc
                     join posting p
                     on pc.postingId = p.id
@@ -537,17 +625,17 @@ class UserCommunityCommentResource(Resource) :
 class UserActivityAreaResource(Resource) :
     # 활동 범위 설정하기
     @jwt_required()
-    def put(self, userId) :
+    def put(self) :
         pass
 
 class UserBuyingResource(Resource) :
     # 구매중인 구매내역 가져오기
     @jwt_required()
-    def get(self, userId) :
+    def get(self) :
         pass
 class UserPurchaseCompleteResource(Resource) :
     # 구매완료 내역 가져오기
     @jwt_required()
-    def get(self, userId) :
+    def get(self) :
         pass
 
