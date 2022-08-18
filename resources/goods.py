@@ -24,7 +24,8 @@ class GoodsListResource(Resource) :
 
             # 게시글 가져오기
             # imageCount : 이미지 등록수, attentionCount : 관심 등록 수, commentCount : 댓글 등록수
-            query = '''select g.id, g.categoriId, g.sellerId, imageCount.image, g.title, g.content, g.price, g.status,
+            query = '''select g.id, g.categoriId, g.sellerId, imageCount.image, g.title, g.content, g.price, 
+                        g.viewCount, g.status,
                         imageCount.imageCount, attentionCount.attentionCount, commentCount.commentCount, g.rentalPeriod, g.createdAt
                         from goods g,
                         (select g.id, count(gi.imageId) as imageCount, gi.imageId as image
