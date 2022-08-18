@@ -626,7 +626,44 @@ class UserActivityAreaResource(Resource) :
     # 활동 범위 설정하기
     @jwt_required()
     def put(self) :
-        pass
+
+        userId = get_jwt_identity()
+        data = request.get_json()
+
+        # DB 업데이트 실행코드
+        try :
+
+            # 데이터 Update
+            # 1. DB에 연결
+            connection = get_connection()            
+            
+
+            # 2. 쿼리문 만들기
+            query = '''Update activity_areas
+                    set activityMeters = %s
+                    where userId = %s;'''                 
+
+            record = (data['activityMeters'], userId)
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+
+        return {'result' : 'success'}, 200
 
 class UserBuyingResource(Resource) :
     # 구매중인 구매내역 가져오기
