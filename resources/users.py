@@ -268,6 +268,11 @@ class UserLocationResource(Resource) :
             return {"error" : str(e)}, 503
 
         return {'result' : 'success'}, 200
+    
+    # 우리 동네 불러오기
+    @jwt_required()
+    def put(self, userId):
+        pass
 
 class UserWishlistResource(Resource) :
     @jwt_required()
@@ -528,3 +533,21 @@ class UserCommunityCommentResource(Resource) :
             "result" : "success",
             "count" : len(items),
             "items" : items}, 200
+
+class UserActivityAreaResource(Resource) :
+    # 활동 범위 설정하기
+    @jwt_required()
+    def put(self, userId) :
+        pass
+
+class UserBuyingResource(Resource) :
+    # 구매중인 구매내역 가져오기
+    @jwt_required()
+    def get(self, userId) :
+        pass
+class UserPurchaseCompleteResource(Resource) :
+    # 구매완료 내역 가져오기
+    @jwt_required()
+    def get(self, userId) :
+        pass
+
