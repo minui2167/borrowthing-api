@@ -92,6 +92,11 @@ class GoodsListResource(Resource) :
                 images = cursor.fetchall()
                 itemImages.append(images)
 
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                i += 1
+
             # 6. 자원 해제
             cursor.close()
             connection.close()
@@ -105,8 +110,7 @@ class GoodsListResource(Resource) :
         return {
             "result" : "success",
             "count" : len(items),
-            "items" : items,
-            "itemImages" : itemImages}, 200
+            "items" : items}, 200
 
     @jwt_required()
     # 빌려주기 글 작성
