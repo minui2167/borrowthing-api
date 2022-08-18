@@ -29,7 +29,7 @@ class GoodsListResource(Resource) :
                         join goods_image gi
                             on g.id = gi.goodsId
                         group by g.id
-                    limit {}, {};'''.format(offset, limit) 
+                        limit {}, {};'''.format(offset, limit) 
 
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
@@ -61,11 +61,11 @@ class GoodsListResource(Resource) :
             # 게시글 사진 가져오기
             for id in selectedId :
                 query = '''
-                select i.userId, gi.imageId, i.imageUrl
+                select gi.goodsId, gi.imageId, i.imageUrl
                 from images i
                 join goods_image gi
                     on i.id = gi.imageId
-                having i.userId = {};'''.format(id)
+                having gi.goodsId = {};'''.format(id)
 
                 # 3. 커서를 가져온다.
                 # select를 할 때는 dictionary = True로 설정한다.
@@ -425,8 +425,8 @@ class GoodsPostingResource(Resource) :
 
             # 작성자와 게시글이 유효한지 확인한다.
             query = '''select * from goods
-                    where sellerId = %s and id = %s;'''
-            record = (userId, goodsId)
+                    where sellerId = %s'''
+            record = (userId, )
             cursor = connection.cursor(dictionary = True)
             cursor.execute(query, record)
             items = cursor.fetchall()
@@ -437,8 +437,30 @@ class GoodsPostingResource(Resource) :
                 return {'error' : '잘못된 접근입니다.'}
             
             # 2. 쿼리문 만들기
+
+            # 관심 상품 삭제
+            query = '''Delete from wish_lists
+                    where goodsId = %s;'''                 
+            record = (goodsId, )
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+            # 구매하기 삭제
+            query = '''Delete from buy
+                    where goodsId = %s;'''                 
+            record = (goodsId, )
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
             # 이미지 삭제
             query = '''Delete from goods_image
+                    where goodsId = %s;'''                 
+            record = (goodsId, )
+            cursor = connection.cursor()
+            cursor.execute(query, record)
+
+            # 거래 후기 삭제
+            query = '''Delete from evaluation_items
                     where goodsId = %s;'''                 
             record = (goodsId, )
             cursor = connection.cursor()
