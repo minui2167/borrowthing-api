@@ -75,11 +75,11 @@ class GoodsListResource(Resource) :
             # 게시글 사진 가져오기
             for id in selectedId :
                 query = '''
-                select gi.goodsId, gi.imageId, i.imageUrl
+                select i.imageUrl
                 from images i
                 join goods_image gi
                     on i.id = gi.imageId
-                having gi.goodsId = {};'''.format(id)
+                where gi.goodsId = {};'''.format(id)
 
                 # 3. 커서를 가져온다.
                 # select를 할 때는 dictionary = True로 설정한다.
