@@ -594,13 +594,102 @@ class GoodsPostingResource(Resource) :
 class GoodsCommentResource(Resource) :
     @jwt_required()
     # 빌려주기 글에 댓글 달기
-    def post(self) :
-        pass
+    def post(self, goodsId) :
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        userId = get_jwt_identity()
+
+        data = request.get_json()
+
+        # 게시물 작성
+        # 3. DB에 저장
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''insert into goods_comments
+                    (goodsId, userId, comment)
+                    values
+                    (%s, %s, %s);'''
+                    
+            # recode 는 튜플 형태로 만든다.
+            recode = (goodsId, userId, data['comment'])
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, recode)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+            
+        return {"result" : "success"}, 200
 
     @jwt_required()
     # 빌려주기 글에 댓글 삭제
-    def delete(self) :
-        pass
+    def delete(self, goodsId) :
+        # 1. 클라이언트로부터 데이터를 받아온다.
+        userId = get_jwt_identity()
+
+        # 게시물 작성
+        # 3. DB에 저장
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from goods_comments
+                    where userId = %s'''
+            record = (userId, )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {'error' : '잘못된 접근입니다.'}
+            
+            # 2. 쿼리문 만들기
+            query = '''delete from goods_comments
+                    where userId = %s and goodsId = %s;'''
+                    
+            # recode 는 튜플 형태로 만든다.
+            recode = (userId, goodsId)
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, recode)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+            
+        return {"result" : "success"}, 200
 
 class GoodsRecommendResource(Resource) :
      @jwt_required()
