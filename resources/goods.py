@@ -23,19 +23,27 @@ class GoodsListResource(Resource) :
             connection = get_connection()   
 
             # 게시글 가져오기
-            # imgCount : 이미지 등록수, attentionCount : 관심 등록 수, comCount : 댓글 등록수
-            query = '''select g.id, g.categoriId, g.sellerId, gi.imageId, g.title, g.content, g.price,
-                    g.viewCount, g.status, count(gi.imageId) as imgCount, 
-                    count(gc.goodsId) as attentionCount, count(gc.comment) as comCount,
-                    g.rentalPeriod, g.createdAt
-                    from goods g
-                    left join goods_image gi
-                        on g.id = gi.goodsId
-                    join wish_lists w
-                        on g.id = w.goodsId
-                    join goods_comments gc
-                        on g.id = gc.goodsId
-                    group by g.sellerId
+            # imageCount : 이미지 등록수, attentionCount : 관심 등록 수, commentCount : 댓글 등록수
+            query = '''select g.id, g.categoriId, g.sellerId, imageCount.image, g.title, g.content, g.price, g.status,
+                        imageCount.imageCount, attentionCount.attentionCount, commentCount.commentCount, g.rentalPeriod, g.createdAt
+                        from goods g,
+                        (select g.id, count(gi.imageId) as imageCount, gi.imageId as image
+                        from goods g
+                        join goods_image gi
+                            on g.id = goodsId
+                        group by g.id) as imageCount,
+                        (select g.id, count(w.goodsId) as attentionCount
+                        from goods g
+                        left join wish_lists w
+                            on g.id = w.goodsId
+                        group by g.id) as attentionCount,
+                        (select g.id, count(gc.comment) as commentCount
+                        from goods g
+                        left join goods_comments gc
+                            on g.id = gc.goodsId
+                        group by g.id) as commentCount
+                        where g.id = imageCount.id and g.id = attentionCount.id and g.id = commentCount.id
+                        group by g.id
                         limit {}, {};'''.format(offset, limit) 
 
             # 3. 커서를 가져온다.
@@ -59,8 +67,7 @@ class GoodsListResource(Resource) :
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
 
-                if record['imgCount'] > 0 :
-                    selectedId.append(record['id'])
+                selectedId.append(record['id'])
 
                 i = i+1
             
