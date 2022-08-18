@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from datetime import datetime
 from flask_restful import Resource
 from flask import request
@@ -182,7 +183,7 @@ class PostingListResource(Resource) :
                         left join posting_image pi
                         on p.id = pi.postingId
                         group by p.id
-                        limit {}, {};'''.format(offset, limit) 
+                        limit {}, {};'''.format(offset, limit)
 
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
@@ -205,20 +206,22 @@ class PostingListResource(Resource) :
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
 
-                if record['imgCount'] > 0 :
-                    selectedId.append(record['id'])
+                # if record['imgCount'] > 0 :
+                selectedId.append(record['id'])
 
                 i = i+1
             
             itemImages = []
+            itemLikesCnt = []
+            itemCommentCnt = []
             # 게시글 사진 가져오기
             for id in selectedId :
                 query = '''
-                select pi.postingId, i.userId, i.imageUrl
+                select i.imageUrl
                 from posting_image pi
                 join images i
                 on pi.imageId = i.id
-                having postingId = {};'''.format(id)
+                where postingId = {};'''.format(id)
 
                 # 3. 커서를 가져온다.
                 # select를 할 때는 dictionary = True로 설정한다.
@@ -231,6 +234,48 @@ class PostingListResource(Resource) :
                 images = cursor.fetchall()
                 itemImages.append(images)
 
+                # 게시글 좋아요 수 가져오기
+                query = '''
+                select count(id) likesCount
+                from likes
+                where postingId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                likesCnt = cursor.fetchall()
+                itemLikesCnt.append(likesCnt)
+
+                # 게시글 댓글 수 가져오기
+                query = '''
+                select count(id) commentCount
+                from posting_comments
+                where postingId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                commentCnt = cursor.fetchall()
+                itemCommentCnt.append(commentCnt)
+            
+            i=0
+            # print(itemLikesCnt[0][0][])
+            for record in items :
+                items[i]['likesCount'] = itemLikesCnt[i][0]['likesCount']
+                items[i]['commentCount'] = itemCommentCnt[i][0]['commentCount']
+                items[i]['imgUrl'] = itemImages[i]
+                i += 1 
+            
             # 6. 자원 해제
             cursor.close()
             connection.close()
@@ -244,8 +289,7 @@ class PostingListResource(Resource) :
         return {
             "result" : "success",
             "count" : len(items),
-            "items" : items,
-            "itemImages" : itemImages}, 200
+            "items" : items}, 200
 
 class PostingInfoResource(Resource) :
     # 커뮤니티 게시글 수정
