@@ -514,8 +514,82 @@ class GoodsPostingResource(Resource) :
         return {'result' : 'success'}, 200
     
     # 특정 빌려주기글 가져오기
-    def get(self) :
-        pass
+    def get(self, goodsId) :
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''select g.id, g.sellerId, g.title, g.content, g.price, g.viewCount, 
+                    g.status, g.rentalPeriod, g.createdAt, count(gi.imageId) as imgCount,
+                    (select count(id) as attentionCount
+                    from wish_lists
+                    where goodsId = %s) as attentionCount,
+                    (select count(id) as commentCount
+                    from goods_comments
+                    where goodsId = %s) as commentCount
+                    from goods g
+                    join goods_image gi
+                        on g.id = gi.goodsId
+                    group by g.id
+                    having id = %s;'''            
+            record = (goodsId, goodsId, goodsId)
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()             
+                i = i+1
+
+            # 이미지 가져오기
+            query = '''select i.imageUrl
+                        from goods_image gi
+                        join images i
+                        on gi.imageId = i.id
+                        where goodsId = %s;'''
+            record = (goodsId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            itemImages = cursor.fetchall()
+            
+            if not itemImages:
+                items[0]['imgUrl'] = []
+            else :
+                items[0]['imgUrl'] = itemImages[0]
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
 
 class GoodsCommentResource(Resource) :
     @jwt_required()
