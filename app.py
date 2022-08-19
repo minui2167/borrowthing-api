@@ -50,7 +50,7 @@ api.add_resource(GoodsCategoryResource, '/categories')
 api.add_resource(GoodsReviewResource, '/evaluation/<int:goodsId>')
 api.add_resource(GoodsInterestItemResource, '/goods/<int:goodsId>/wish')
 api.add_resource(GoodsRecommendResource, '/goods/recommend')
-api.add_resource(GoodsDealResource, '/user/<int:goodsId>/deal')
+api.add_resource(GoodsDealResource, '/goods/deal')
 
 # community
 api.add_resource(PostingListResource, '/community')
