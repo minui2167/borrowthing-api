@@ -265,6 +265,118 @@ class PostingListResource(Resource) :
             "count" : len(items),
             "items" : items}, 200
 
+    
+class LoginStatusPostingListResource(Resource) :
+    # 로그인 상태일 때 게시글 목록 리스트 (isLike 추가))
+    @jwt_required()
+    def get(self) :
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        
+        userId = get_jwt_identity()
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 게시글 가져오기         
+            query = '''select p.* , likesCount.likesCount, commentCount.commentCount, imgCount.imgCount, isLike.isLike
+                        from posting p,
+                        (select p.id, count(l.id) likesCount from posting p
+                        left join likes l
+                        on p.id = l.postingId
+                        group by p.id) likesCount,
+                        (select p.id, count(pc.id) commentCount from posting p
+                        left join posting_comments pc
+                        on p.id = pc.postingId
+                        group by p.id) commentCount,
+                        (select p.id, count(pi.id) imgCount from posting p
+                        left join posting_image pi
+                        on p.id = pi.postingId
+                        group by p.id) imgCount,
+                        (select p.*, if(l.userId is null, 0, 1) isLike
+                        from posting p
+                        left join likes l
+                        on p.id = l.postingId and l.userId = %s
+                        group by p.id) isLike
+                        where p.id = likesCount.id and p.id = commentCount.id and p.id = imgCount.id and p.id = isLike.id
+                        group by p.id
+                        limit {}, {};'''.format(offset, limit)
+
+            record = (userId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0
+            
+            selectedId = []
+            cnt = 0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+
+                selectedId.append(record['id'])
+
+                i = i+1
+            
+            itemImages = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from posting_image pi
+                join images i
+                on pi.imageId = i.id
+                where postingId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+            
+            
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                i += 1 
+            
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
+        
+  
 class PostingInfoResource(Resource) :
     # 커뮤니티 게시글 수정
     @jwt_required()
@@ -554,7 +666,7 @@ class PostingInfoResource(Resource) :
             if not itemImages:
                 items[0]['imgUrl'] = []
             else :
-                items[0]['imgUrl'] = itemImages[0]
+                items[0]['imgUrl'] = itemImages
 
 
             # 6. 자원 해제
@@ -573,6 +685,96 @@ class PostingInfoResource(Resource) :
             "count" : len(items),
             "items" : items}, 200
 
+class LoginStatusPostingInfoResources(Resource) :
+    # 로그인 상태일 때 특정 커뮤니티 게시글 가져오기
+    @jwt_required()
+    def get(self, postingId) :
+        try :
+            userId = get_jwt_identity()
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+            # 2. 쿼리문 만들기
+            query = '''select p.* , count(pi.imageId) imgCount,
+                    (select count(id) commentCount
+                                    from posting_comments
+                                    where postingId = %s) commentCount,
+                    (select count(id) likesCount
+                                    from likes
+                                    where postingId = %s) likesCount,
+                    (select if(l.userId is null, 0, 1) isLike
+                                    from posting p
+                                    left join likes l
+                                    on p.id = l.postingId and l.userId = %s
+                                    where p.id = %s
+                    ) isLike
+                    from posting p
+                    left join posting_image pi
+                    on p.id = pi.postingId
+                    group by p.id
+                    having p.id = %s;'''            
+            record = (postingId, postingId, userId, postingId, postingId)
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0
+            
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()             
+                i = i+1
+
+            # 이미지 가져오기
+            query = '''select i.imageUrl
+                        from posting_image pi
+                        join images i
+                        on pi.imageId = i.id
+                        where postingId = %s;'''
+            record = (postingId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            itemImages = cursor.fetchall()
+            print(itemImages)
+
+            if not itemImages:
+                items[0]['imgUrl'] = []
+            else :
+                items[0]['imgUrl'] = itemImages
+
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
+        
 class PostingCommentResource(Resource) :
     # 커뮤니티 게시글 댓글 달기
     @jwt_required()

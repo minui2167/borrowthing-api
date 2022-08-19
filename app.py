@@ -3,7 +3,7 @@ from flask_restful import Api
 from config import Config
 from flask_jwt_extended import JWTManager
 from resources.chat import ChatRoomResource
-from resources.community import PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource, PostingCommentInfoResource
+from resources.community import LoginStatusPostingInfoResources, LoginStatusPostingListResource, PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource, PostingCommentInfoResource
 from resources.goods import GoodsCategoryResource, GoodsCommentResource, GoodsDealResource, GoodsInterestItemResource, GoodsPostingResource, GoodsRecommendResource, GoodsReviewResource
 from resources.goods2 import GoodsListInAreaResource, GoodsListResource
 from resources.users import UserActivityAreaResource, UserBuyResource, UserBuyingResource, UserCommunityCommentResource, UserEditResource, UserGoodsCommentResource, UserLikesPostingResource, UserLocationResource, UserLoginResource, UserLogoutResource, UserPurchaseCompleteResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
@@ -54,7 +54,9 @@ api.add_resource(GoodsDealResource, '/goods/<int:goodsId>/deal')
 
 # community
 api.add_resource(PostingListResource, '/community')
+api.add_resource(LoginStatusPostingListResource, '/community/login')
 api.add_resource(PostingInfoResource, '/community/<int:postingId>')
+api.add_resource(LoginStatusPostingInfoResources, '/community/login/<int:postingId>')
 api.add_resource(PostingCommentResource,'/community/<int:postingId>/comment')
 api.add_resource(PostingCommentInfoResource,'/community/<int:postingId>/comment/<int:commentId>')
 api.add_resource(PostingLikesResource, '/community/<int:postingId>/likes')
