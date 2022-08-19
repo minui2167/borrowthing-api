@@ -362,39 +362,98 @@ class UserLikesPostingResource(Resource) :
     # 내가 좋아요 누른 게시물 가져오기
     def get(self) :
         # 1. 클라이언트로부터 데이터를 받아온다.
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        
         userId = get_jwt_identity()
-
         try :
-            connection = get_connection()
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
 
-            query = '''select l.userId, l.postingId, p.content, 
-                    p.viewCount, p.createdAt
-                    from likes l
-                    join posting p
-                        on l.postingId = p.id
-                    where l.userId = %s;'''
-            
+            # 게시글 가져오기         
+            query = '''select p.* , likesCount.likesCount, commentCount.commentCount, imgCount.imgCount, likes.isLike
+                        from posting p,
+                        (select p.id, count(l.id) likesCount from posting p
+                        left join likes l
+                        on p.id = l.postingId
+                        group by p.id) likesCount,
+                        (select p.id, count(pc.id) commentCount from posting p
+                        left join posting_comments pc
+                        on p.id = pc.postingId
+                        group by p.id) commentCount,
+                        (select p.id, count(pi.id) imgCount from posting p
+                        left join posting_image pi
+                        on p.id = pi.postingId
+                        group by p.id) imgCount,
+                        (select p.*, if(l.userId is null, 0, 1) isLike
+                        from posting p
+                        left join likes l
+                        on p.id = l.postingId and l.userId = %s
+                        group by p.id) likes
+                        where p.id = likesCount.id and p.id = commentCount.id and p.id = imgCount.id and p.id = likes.id and isLike = 1
+                        group by p.id
+                        limit {}, {};'''.format(offset, limit)
+
             record = (userId, )
-
-            # select 문은, dictionary = True 를 해준다.
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
 
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
-            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
             items = cursor.fetchall()
-
-            print(items)
-
-            # 중요! 디비에서 가져온 timestamp 는 
+            
+            # 중요! 디비에서 가져온 timestamp는 
             # 파이썬의 datetime 으로 자동 변경된다.
-            # 문제는! 이데이터를 json 으로 바로 보낼수 없으므로,
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
             # 문자열로 바꿔서 다시 저장해서 보낸다.
-            i = 0
+            i=0
+            
+            selectedId = []
+            cnt = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-                i = i + 1
 
+                selectedId.append(record['id'])
+
+                i = i+1
+            
+            itemImages = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from posting_image pi
+                join images i
+                on pi.imageId = i.id
+                where postingId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+            
+            
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                i += 1 
+            
+            # 6. 자원 해제
             cursor.close()
             connection.close()
 
@@ -402,12 +461,12 @@ class UserLikesPostingResource(Resource) :
             print(e)
             cursor.close()
             connection.close()
-
-            return {"error" : str(e), 'error_no' : 20}, 503
-
-        return {'result' : 'success', 
-                'count' : len(items),
-                'items' : items}, 200
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
 
 class UserBuyResource(Resource) :
     @jwt_required()
