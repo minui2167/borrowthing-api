@@ -392,3 +392,9 @@ class GoodsListResource(Resource) :
                         connection.close()
                     
         return {"result" : "success"}, 200
+
+class GoodsListInAreaResource(Resource) :
+    @jwt_required()
+    # 활동 범위 내에 있는 빌려주기 글 가져오기
+    def get(self) :
+        pass
