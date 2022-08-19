@@ -5,7 +5,7 @@ from mysql_connection import get_connection
 import mysql.connector
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import boto3
-
+import requests
 from config import Config
 
 # 태그기능 추가 !
@@ -74,6 +74,7 @@ class GoodsListResource(Resource) :
                 i = i+1
             
             itemImages = []
+            itemTags = []
             # 게시글 사진 가져오기
             for id in selectedId :
                 query = '''
@@ -94,9 +95,24 @@ class GoodsListResource(Resource) :
                 images = cursor.fetchall()
                 itemImages.append(images)
 
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
             i=0
             for record in items :
                 items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
                 i += 1
 
             # 6. 자원 해제
@@ -152,7 +168,7 @@ class GoodsListResource(Resource) :
             connection.commit()
 
             # 이 포스팅의 아이디 값을 가져온다.
-            postingId = cursor.lastrowid
+            goodsId = cursor.lastrowid
 
             # 6. 자원 해제
             cursor.close()
@@ -163,10 +179,15 @@ class GoodsListResource(Resource) :
             cursor.close()
             connection.close()
             return {"error" : str(e)}, 503
-            
+        
+        # rekognition 을 이용해서 object detection 한다.
+        client = boto3.client('rekognition',
+                            'ap-northeast-2',                               # region
+                            aws_access_key_id = Config.ACCESS_KEY,          # ACCESS_KEY   
+                            aws_secret_access_key = Config.SECRET_ACCESS)   # SECRET_ACCESS
 
         # photo(file), content(text)
-        photoList = ['image']
+        photoList = ['photo1', 'photo2', 'photo3']
         for photo in photoList :
             if photo in request.files:
                 # 2. S3에 파일 업로드
@@ -248,7 +269,7 @@ class GoodsListResource(Resource) :
                             (%s, %s);'''
                             
                     # recode 는 튜플 형태로 만든다.
-                    recode = (postingId, imageId)
+                    recode = (goodsId, imageId)
 
                     # 3. 커서를 가져온다.
                     cursor = connection.cursor()
@@ -268,5 +289,106 @@ class GoodsListResource(Resource) :
                     cursor.close()
                     connection.close()
                     return {"error" : str(e)}, 503
-            
+
+                response = client.detect_labels(Image = {
+                                                'S3Object' : {
+                                                        'Bucket' : Config.S3_BUCKET,
+                                                        'Name' : file.filename
+                                                        }},
+                                        MaxLabels = 2)
+                
+                # 4. 레이블의 Name을 가지고, 태그를 만든다! 
+
+                # 4-1. label['Name'] 의 문자열을 tag_name 테이블에서 찾는다.
+                #      테이블에 이 태그가 있으면, id를 가져온다.
+                #      태그 id와 위의 goodsId 를 가지고, 
+                #      tags 테이블에 저장한다.
+
+                # 4-2. 만약 tag_name 테이블에 이 태그가 없으면, 
+                #      tag_name 테이블에, 이 태그 이름을 저장하고,
+                #      저장된 id 값과 위의 goodsId를 가지고,
+                #      tags 테이블에 저장한다.
+        
+                for label in response['Labels'] :
+                    # label['Name'] 이 값을 우리는 태그 이름으로 사용할것
+                    try :
+                        # 파파고 번역하기
+                        hearders = {'Content-Type' : 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-Naver-Client-Id' : Config.NAVER_CLIENT_ID,
+                            'X-Naver-Client-Secret' : Config.NAVER_CLIENT_SECRET}
+
+                        data = {'source' : 'en',
+                                'target' : 'ko',
+                                'text' : label['Name']}
+
+                        res = requests.post(Config.NAVER_PAPAGO_URL, data, headers = hearders)
+                        
+                        translatedText = res.json()['message']['result']['translatedText']
+                        # 1. DB에 연결
+                        connection = get_connection()
+                        
+                        # 2. 쿼리문 만들기
+                        query = '''select * from tag_name
+                                    where name = %s;'''                 
+
+                        record = (translatedText,)
+                        print(translatedText)
+                        
+                        # 3. 커서를 가져온다.
+                        # select를 할 때는 dictionary = True로 설정한다.
+                        cursor = connection.cursor(dictionary = True)
+
+                        # 4. 쿼리문을 커서를 이용해서 실행한다.
+                        cursor.execute(query, record)
+
+                        # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                        items = cursor.fetchall()
+
+                        if len(items) == 0 :
+                            # 태그 이름을 insert 해준다.
+                            query = '''insert into tag_name
+                                    (name)
+                                    values
+                                    (%s);'''
+                            # recode 는 튜플 형태로 만든다.
+                            recode = (translatedText, )
+
+                            # 3. 커서를 가져온다.
+                            cursor = connection.cursor()
+
+                            # 4. 쿼리문을 커서를 이용해서 실행한다.
+                            cursor.execute(query, recode)
+
+                            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+                            connection.commit()
+
+                            # 태그 아이디를 가져온다.
+                            tagNameId = cursor.lastrowid
+                        else :
+                            tagNameId = items[0]['id']
+                        
+                        # goodsId 와 tagNameId가 준비되었으니
+                        # tag 테이블에 insert 한다.
+                        query = '''insert into tags
+                            (goodsId, tagNameId)
+                            values
+                            (%s, %s);'''   
+                        # recode 는 튜플 형태로 만든다.
+                        recode = (goodsId, tagNameId)
+
+                        # 3. 커서를 가져온다.
+                        cursor = connection.cursor()
+
+                        # 4. 쿼리문을 커서를 이용해서 실행한다.
+                        cursor.execute(query, recode)
+
+                        # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+                        connection.commit()
+                        # 6. 자원 해제
+                        cursor.close()
+                        connection.close()
+                    except mysql.connector.Error as e :
+                        cursor.close()
+                        connection.close()
+                    
         return {"result" : "success"}, 200
