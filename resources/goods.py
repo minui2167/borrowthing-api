@@ -824,13 +824,12 @@ class GoodsRecommendResource(Resource) :
 class GoodsDealResource(Resource) :
     @jwt_required()
     # 거래 신청하기
-    def post(self) :
+    def post(self, goodsId) :
         # 상품의 거래상태가 0 (거래 대기)일 때, 거래신청이 가능
         # 거래 신청을 하면 buy 테이블에 상품, 구매자 추가
         # 상품의 상태를 1 (거래 중)로 변경
         userId = get_jwt_identity()
-        data = request.get_json()
-        print(data['goodsId'])
+        
         try :
             # 1. DB에 연결
             connection = get_connection()   
@@ -839,7 +838,7 @@ class GoodsDealResource(Resource) :
             query = '''select * from goods
                     where id = %s'''
 
-            record = (data['goodsId'], )
+            record = (goodsId, )
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
@@ -867,7 +866,7 @@ class GoodsDealResource(Resource) :
                     (%s, %s);'''
                     
             # recode 는 튜플 형태로 만든다.
-            recode = (userId, data['goodsId'])
+            recode = (userId, goodsId)
 
             # 3. 커서를 가져온다.
             cursor = connection.cursor()
@@ -882,7 +881,7 @@ class GoodsDealResource(Resource) :
                     where id = %s;'''
                     
             # recode 는 튜플 형태로 만든다.
-            recode = (data['goodsId'], )
+            recode = (goodsId, )
 
             # 3. 커서를 가져온다.
             cursor = connection.cursor()
@@ -905,9 +904,9 @@ class GoodsDealResource(Resource) :
         return {"result" : "success"}, 200
 
     # 거래 취소하기
-    def post(self) :
+    def put(self, goodsId) :
         pass
 
     # 거래 완료하기
-    def delete(self) :
+    def delete(self, goodsId) :
         pass
