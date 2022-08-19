@@ -397,4 +397,121 @@ class GoodsListInAreaResource(Resource) :
     @jwt_required()
     # 활동 범위 내에 있는 빌려주기 글 가져오기
     def get(self) :
-        pass
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            userId = get_jwt_identity()
+
+            # 게시글 가져오기
+            # imageCount : 이미지 등록수, attentionCount : 관심 등록 수, commentCount : 댓글 등록수
+            query = '''select u.nickname, g.sellerId, g.title, g.content, g.price, g.status,
+                    ad.originArea, ea.name, ad.goalArea, ad.distance, aa.activityMeters, 
+                    aa.authenticatedAt, g.rentalPeriod, g.createdAt, i.imageUrl
+                    from area_distances ad
+                    left join emd_areas ea
+                        on ea.id = ad.originArea
+                    left join activity_areas aa
+                        on ea.id = aa.emdId
+                    left join users u
+                        on u.id = aa.emdId
+                    left join goods g
+                        on u.id = g.sellerId
+                    join goods_image gi
+                        on g.id = gi.goodsId
+                    left join images i
+                        on i.id = gi.imageId
+                    where ad.originArea = %s and ad.distance <= aa.activityMeters
+                    group by g.id;
+                        limit {}, {};'''.format(offset, limit) 
+            
+            record = (userId, )
+
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+
+            i=0
+            selectedId = []
+            cnt = 0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+                items[i]['authenticatedAt'] = record['authenticatedAt'].isoformat()
+
+                selectedId.append(record['id'])
+
+                i = i+1
+            
+            itemImages = []
+            itemTags = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from images i
+                join goods_image gi
+                    on i.id = gi.imageId
+                where gi.goodsId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
+                i += 1
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
