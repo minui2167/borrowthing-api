@@ -237,13 +237,28 @@ class UserLocationResource(Resource) :
             # 1. DB에 연결
             connection = get_connection()
 
-            # 5-1. 쿼리문 만들기
-            query = '''insert into activity_areas
-                    (emdId, userId)
-                    values
-                    (%s, %s)'''
+            # 우리지역이 설정되어 있는지 확인
+            query = '''select * from activity_areas
+                    where userId = %s;'''
+            record = (userId, )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            # 설정된 것이 없으면 insert
+            if len(items) < 1 :
+                query = '''insert into activity_areas
+                        (emdId, userId)
+                        values
+                        (%s, %s)'''
+                
+                record = (data["emdId"], userId)
+            else :
+                query = '''update activity_areas
+                        set emdId = %s
+                        where userId = %s'''
             
-            record = (data["emdId"], userId)
+                record = (data["emdId"], userId)
 
             # 5-2. 커서를 가져온다.
             cursor = connection.cursor()
@@ -253,9 +268,6 @@ class UserLocationResource(Resource) :
 
             # 5-4. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
             connection.commit()
-
-            # 5-5. 디비에 저장된 아이디값 가져오기.
-            userId = cursor.lastrowid
 
             # 6. 자원 해제
             cursor.close()
@@ -269,6 +281,8 @@ class UserLocationResource(Resource) :
 
         return {'result' : 'success'}, 200
     
+    
+
     # 우리 동네 불러오기
     @jwt_required()
     def get(self):
