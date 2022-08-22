@@ -775,12 +775,104 @@ class UserActivityAreaResource(Resource) :
         return {'result' : 'success'}, 200
 
 class UserBuyingResource(Resource) :
-    # 구매중인 구매내역 가져오기
+    # 거래중인 구매내역 가져오기
     @jwt_required()
     def get(self) :
-        pass
+
+        userId = get_jwt_identity()
+
+        try :
+            connection = get_connection()
+
+            query = '''select g.id, u.nickname, g.categoriId, g.sellerId, g.createdAt, 
+                    g.title, g.content, g.price, g.rentalPeriod, g.status
+                    from users u
+                    join goods g
+                        on u.id = g.sellerId
+                    where g.sellerId = %s and g.status = 1;'''
+
+            record = (userId, )
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            items = cursor.fetchall()
+
+            print(items)
+
+            i=0
+            
+            selectedId = []
+            cnt = 0
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+
+                selectedId.append(record['id'])
+
+                i = i+1
+            
+            itemImages = []
+            itemTags = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from images i
+                join goods_image gi
+                    on i.id = gi.imageId
+                where gi.goodsId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
+                i += 1
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
+
 class UserPurchaseCompleteResource(Resource) :
-    # 구매완료 내역 가져오기
+    # 거래완료 내역 가져오기
     @jwt_required()
     def get(self) :
         pass
