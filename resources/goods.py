@@ -98,13 +98,11 @@ class GoodsPostingResource(Resource) :
 
         # 이미지 다시 추가
         # photo(file), content(text)
-        photoList = ['photo1', 'photo2', 'photo3']
-        for photo in photoList :
-            if photo in request.files:
-                # 2. S3에 파일 업로드
-                # 클라이언트로부터 파일을 받아온다.
-                file = request.files[photo]
-
+        if 'photo' in request.files:
+            # 2. S3에 파일 업로드
+            # 클라이언트로부터 파일을 받아온다.
+            files = request.files.getlist("photo")
+            for file in files :    
                 # 파일명을 우리가 변경해 준다.
                 # 파일명은, 유니크하게 만들어야 한다.
                 current_time = datetime.now()
@@ -358,6 +356,17 @@ class GoodsPostingResource(Resource) :
 
             # 태그 삭제
             query = '''Delete from tags
+                    where goodsId = %s;'''
+            record = (goodsId, )
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 구매내역 삭제
+            query = '''Delete from buy
                     where goodsId = %s;'''
             record = (goodsId, )
 
