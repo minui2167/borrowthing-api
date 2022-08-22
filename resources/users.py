@@ -779,6 +779,9 @@ class UserBuyingResource(Resource) :
     @jwt_required()
     def get(self) :
 
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')
+
         userId = get_jwt_identity()
 
         try :
@@ -789,7 +792,8 @@ class UserBuyingResource(Resource) :
                     from users u
                     join goods g
                         on u.id = g.sellerId
-                    where g.sellerId = %s and g.status = 1;'''
+                    where g.sellerId = %s and g.status = 1
+                    limit {}, {};'''.format(offset, limit)
 
             record = (userId, )
 
