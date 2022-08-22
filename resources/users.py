@@ -558,33 +558,106 @@ class UserSaleResource(Resource) :
     def get(self) :
         userId = get_jwt_identity()
 
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+        status = request.args.get('status') 
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 200
+
+        if status is None or int(status) > 2 or int(status) < 0:
+            return {'error' : 'status를 제대로 셋팅해 주세요.',
+                    'error_no' : 123}, 200                    
         try :
-            connection = get_connection()
+            # 1. DB에 연결
+            connection = get_connection()   
 
-            query = '''select u.nickname, g.categoriId, g.sellerId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
-                    from users u
-                    join goods g
-                        on u.id = g.sellerId
-                    where u.id = %s and status = 2;
-                    '''
-            
+            # 게시글 가져오기
+            # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
+            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
+                        from goods g,
+                        (select g.id, count(wl.id) wishCount from goods g
+                                                left join wish_lists wl
+                                                on g.id = wl.goodsId
+                                                group by g.id) wishCount,
+                        (select g.id, count(gc.id) commentCount from goods g
+                                                left join goods_comments gc
+                                                on g.id = gc.goodsId
+                                                group by g.id) commentCount,
+                        (select g.id, count(gi.id) imgCount from goods g
+                                                left join goods_image gi
+                                                on g.id = gi.goodsId
+                                                group by g.id) imgCount
+                        where g.sellerId = %s and g.status = {} and g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id 
+                        order by g.updatedAt desc
+                        limit {}, {};'''.format(status, offset, limit) 
             record = (userId, )
-
-            # select 문은, dictionary = True 를 해준다.
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
 
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
-            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
             items = cursor.fetchall()
-
-            print(items)
-
-            i = 0
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0         
+            selectedId = []
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-                i = i + 1
+                items[i]['updatedAt'] = record['updatedAt'].isoformat()
+                selectedId.append(record['id'])
+                i = i+1
 
+            itemImages = []
+            itemTags = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from images i
+                join goods_image gi
+                    on i.id = gi.imageId
+                where gi.goodsId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
+                i += 1
+
+            # 6. 자원 해제
             cursor.close()
             connection.close()
 
@@ -592,12 +665,12 @@ class UserSaleResource(Resource) :
             print(e)
             cursor.close()
             connection.close()
-
-            return {"error" : str(e), 'error_no' : 20}, 503
-
-        return {'result' : 'success', 
-                'count' : len(items),
-                'items' : items}, 200
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
                 
 class UserGoodsCommentResource(Resource) :
     @jwt_required()
