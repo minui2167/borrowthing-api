@@ -320,7 +320,8 @@ class UserWishlistResource(Resource) :
         try :
             connection = get_connection()
 
-            query = '''select w.userId, w.goodsId, g.sellerId, g.createdAt, g.title, g.content, g.price, g.rentalPeriod, g.status
+            query = '''select g.id, w.userId, w.goodsId, g.sellerId, g.createdAt, g.title, 
+                    g.content, g.price, g.rentalPeriod, g.status
                     from goods g
                     join wish_lists w
                         on g.id = w.goodsId
@@ -338,11 +339,60 @@ class UserWishlistResource(Resource) :
 
             print(items)
 
-            i = 0
+            i=0
+            
+            selectedId = []
+            cnt = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-                i = i + 1
 
+                selectedId.append(record['id'])
+
+                i = i+1
+            
+            itemImages = []
+            itemTags = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from images i
+                join goods_image gi
+                    on i.id = gi.imageId
+                where gi.goodsId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
+                i += 1
+
+            # 6. 자원 해제
             cursor.close()
             connection.close()
 
@@ -350,12 +400,12 @@ class UserWishlistResource(Resource) :
             print(e)
             cursor.close()
             connection.close()
-
-            return {"error" : str(e), 'error_no' : 20}, 503
-
-        return {'result' : 'success', 
-                'count' : len(items),
-                'items' : items}, 200
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
 
 class UserLikesPostingResource(Resource) :
     @jwt_required()
