@@ -823,8 +823,6 @@ class UserBuyingResource(Resource) :
             # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
             items = cursor.fetchall()
 
-            print(items)
-
             i=0
             
             selectedId = []
