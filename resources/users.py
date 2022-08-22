@@ -807,47 +807,71 @@ class UserActivityAreaResource(Resource) :
         return {'result' : 'success'}, 200
 
 class UserBuyingResource(Resource) :
-    # 거래중인 구매내역 가져오기
+    # 구매내역 가져오기
     @jwt_required()
     def get(self) :
-
         offset = request.args.get('offset')
-        limit = request.args.get('limit')
-
+        limit = request.args.get('limit')   
+        status = request.args.get('status')
         userId = get_jwt_identity()
-
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
         try :
-            connection = get_connection()
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
 
-            query = '''select g.id, u.nickname, g.categoriId, g.sellerId, g.createdAt, 
-                    g.title, g.content, g.price, g.rentalPeriod, g.status
-                    from users u
-                    join goods g
-                        on u.id = g.sellerId
-                    where g.sellerId = %s and g.status = 1
-                    limit {}, {};'''.format(offset, limit)
+            # 게시글 가져오기
+            # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
+            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish
+                    from (select g.* from goods g
+											left join buy b
+											on g.id = b.goodsId 
+                                            where b.buyerId = %s and g.status = {}) g,
+                    (select g.id, count(wl.id) wishCount from goods g
+                                            left join wish_lists wl
+                                            on g.id = wl.goodsId
+                                            group by g.id) wishCount,
+                    (select g.id, count(gc.id) commentCount from goods g
+                                            left join goods_comments gc
+                                            on g.id = gc.goodsId
+                                            group by g.id) commentCount,
+                    (select g.id, count(gi.id) imgCount from goods g
+                                            left join goods_image gi
+                                            on g.id = gi.goodsId
+                                            group by g.id) imgCount,
+                    (select g.*, if(wl.userId is null, 0, 1) isWish
+                                            from goods g
+                                            left join wish_lists wl
+                                            on g.id = wl.goodsId and wl.userId = %s
+                                            group by g.id) isWish                     
+                    where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
+                    limit {}, {};'''.format(status, offset, limit) 
 
-            record = (userId, )
-
-            # select 문은, dictionary = True 를 해준다.
+            record = (userId, userId)
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
 
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
-            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
             items = cursor.fetchall()
-
-            i=0
             
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0         
             selectedId = []
-            cnt = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-
+                items[i]['updatedAt'] = record['updatedAt'].isoformat()
                 selectedId.append(record['id'])
-
                 i = i+1
-            
+
             itemImages = []
             itemTags = []
             # 게시글 사진 가져오기
@@ -869,6 +893,7 @@ class UserBuyingResource(Resource) :
                 # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
                 images = cursor.fetchall()
                 itemImages.append(images)
+
 
                 query = '''select tn.name tagName from tags t
                         join tag_name tn

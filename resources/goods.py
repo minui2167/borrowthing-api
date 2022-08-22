@@ -730,7 +730,24 @@ class GoodsReviewResource(Resource) :
             
             # DB에 연결
             connection = get_connection()
+
+            # 이 유저가 구매자가 맞는지 확인
+            query = '''select * from buy
+                    where goodsId = %s and buyerId = %s;'''
             
+            record = (goodsId, userId)
+
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+            item = cursor.fetchall()
+
+            if len(item) < 1 :
+                return {"error" : "구매자가 아닙니다."}, 200
+
             # 조건 검사용 쿼리
             query = '''select status from goods
                     where id = %s'''
@@ -743,6 +760,7 @@ class GoodsReviewResource(Resource) :
 
             # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query,record)
+        
 
             # 거래 완료 상태인지 확인
             item = cursor.fetchall()
