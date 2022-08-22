@@ -1,4 +1,5 @@
 import datetime
+from pkgutil import iter_modules
 from flask import request
 from flask_jwt_extended import create_access_token, get_jwt, jwt_required, get_jwt_identity
 from flask_restful import Resource
@@ -243,22 +244,58 @@ class UserLocationResource(Resource) :
             record = (userId, )
             cursor = connection.cursor(dictionary = True)
             cursor.execute(query, record)
+            isSet = cursor.fetchall()
+
+            # 시, 도 지역 찾기
+            query = '''select * from sido_areas
+                    where name = %s;'''
+            record = (data['sidoName'], )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+            if not items :
+                return {"error" : "지원하는 지역이 아닙니다."}, 200
+            sidoId = items[0]['id']
+
+            # 시, 군, 구 찾기
+            query = '''select * from sigg_areas
+                    where sidoAreaId = %s and name = %s;'''
+            record = (sidoId, data['siggName'])
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
             items = cursor.fetchall()
 
+            if not items :
+                return {"error" : "지원하는 지역이 아닙니다."}, 200
+            siggId = items[0]['id']
+            # 읍, 면, 동 찾기
+            query = '''select * from emd_areas
+                    where siggAreaId = %s and name = %s;'''
+            record = (sidoId, data['emdName'])
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if not items :
+                return {"error" : "지원하는 지역이 아닙니다."}, 200
+            emdId = items[0]['id']
+
+            
+
             # 설정된 것이 없으면 insert
-            if len(items) < 1 :
+            if len(isSet) < 1 :
                 query = '''insert into activity_areas
                         (emdId, userId)
                         values
                         (%s, %s)'''
                 
-                record = (data["emdId"], userId)
+                record = (emdId, userId)
             else :
                 query = '''update activity_areas
                         set emdId = %s
                         where userId = %s'''
             
-                record = (data["emdId"], userId)
+                record = (emdId, userId)
 
             # 5-2. 커서를 가져온다.
             cursor = connection.cursor()
