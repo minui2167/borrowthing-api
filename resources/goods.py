@@ -1157,23 +1157,7 @@ class GoodsDealResource(Resource) :
             if items[0]['status'] != 1 :
                 return {"error" : "거래 중인 상태가 아닙니다."}, 200
 
-
-            # 거래 신청을 하면 buy 테이블에 상품, 구매자 삭제
-            # 2. 쿼리문 만들기
-            query = '''Delete from buy
-                        where buyerId = %s and goodsId = %s;'''
-                    
-            # recode 는 튜플 형태로 만든다.
-            recode = (userId, goodsId)
-
-            # 3. 커서를 가져온다.
-            cursor = connection.cursor()
-
-            # 4. 쿼리문을 커서를 이용해서 실행한다.
-            cursor.execute(query, recode)
-
-
-            # 상품의 상태를 1 (거래 중)로 변경
+            # 상품의 상태를 2 (거래 완료)로 변경
             query = '''Update goods
                     set status = 2
                     where id = %s;'''
