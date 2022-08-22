@@ -424,7 +424,7 @@ class GoodsListInAreaResource(Resource) :
                                             on g.id = gi.goodsId
                                             group by g.id) imgCount
                     where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id
-                    limit 0, 20;'''.format(offset, limit) 
+                    limit {}, {};'''.format(offset, limit) 
 
             record = (userId, )
             # 3. 커서를 가져온다.
