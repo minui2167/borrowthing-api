@@ -59,13 +59,13 @@ class PostingListResource(Resource) :
             
 
         # photo(file), content(text)
-        photoList = ['photo1', 'photo2', 'photo3']
-        for photo in photoList :
-            if photo in request.files:
-                # 2. S3에 파일 업로드
-                # 클라이언트로부터 파일을 받아온다.
-                file = request.files[photo]
-
+        # photoList = ['photo1', 'photo2', 'photo3']
+        # for photo in photoList :
+        if 'photo' in request.files:
+            # 2. S3에 파일 업로드
+            # 클라이언트로부터 파일을 받아온다.
+            files = request.files.getlist("photo")
+            for file in files :
                 # 파일명을 우리가 변경해 준다.
                 # 파일명은, 유니크하게 만들어야 한다.
                 current_time = datetime.now()
