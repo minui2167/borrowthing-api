@@ -194,6 +194,7 @@ class PostingListResource(Resource) :
                         group by p.id) imgCount
                         where p.id = likesCount.id and p.id = commentCount.id and p.id = imgCount.id
                         group by p.id
+                        order by p.createdAt desc
                         limit {}, {};'''.format(offset, limit)
 
             # 3. 커서를 가져온다.
@@ -305,6 +306,7 @@ class LoginStatusPostingListResource(Resource) :
                         group by p.id) isLike
                         where p.id = likesCount.id and p.id = commentCount.id and p.id = imgCount.id and p.id = isLike.id
                         group by p.id
+                        order by p.createdAt desc
                         limit {}, {};'''.format(offset, limit)
 
             record = (userId, )

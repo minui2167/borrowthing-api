@@ -40,6 +40,7 @@ class GoodsListResource(Resource) :
                                                 on g.id = gi.goodsId
                                                 group by g.id) imgCount
                         where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id
+                        order by g.updatedAt desc
                         limit {}, {};'''.format(offset, limit) 
 
             # 3. 커서를 가져온다.
@@ -428,6 +429,7 @@ class GoodsListInAreaResource(Resource) :
                                             on g.id = wl.goodsId and wl.userId = %s
                                             group by g.id) isWish                     
                     where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
+                    order by g.updatedAt desc
                     limit {}, {};'''.format(offset, limit) 
 
             record = (userId, userId)
