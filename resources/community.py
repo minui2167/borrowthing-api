@@ -1021,7 +1021,7 @@ class PostingCommentInfoResource(Resource) :
             connection.close()
             return {"error" : str(e)}, 503
         
-        return {"result" : "success"}, 400
+        return {"result" : "success"}, 200
 
     # 커뮤니티 게시글 댓글 삭제
     @jwt_required()
