@@ -148,6 +148,19 @@ class GoodsListResource(Resource) :
             # 1. DB에 연결
             connection = get_connection()
             
+            # 작성자가 동네설정을 했는지 확인한다.
+            query = '''select * from activity_areas
+                    where userId = %s;'''    
+            record = (userId, )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :
+                cursor.close()
+                connection.close()
+                return {"error" : "동네 설정 후 작성 가능합니다."}
+
             # 2. 쿼리문 만들기
             query = '''insert into goods
                     (title, content, price, rentalPeriod, categoriId, sellerId)
