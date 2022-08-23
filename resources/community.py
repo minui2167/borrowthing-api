@@ -844,7 +844,9 @@ class PostingCommentResource(Resource) :
             connection = get_connection()   
 
             # 댓글 가져오기         
-            query = '''select * from posting_comments
+            query = '''select pc.*, u.nickname from posting_comments pc
+                    join users u
+                    on pc.userId = u.id
                     where postingId = %s
                     limit {}, {};'''.format(offset, limit) 
             
@@ -905,8 +907,11 @@ class LoginStatusPostingCommentResource(Resource) :
             connection = get_connection()   
 
             # 댓글 가져오기         
-            query = '''select *, if(userId = %s, 1, 0) isAuther from posting_comments
-                    where postingId = %s;
+            query = '''select pc.*, u.nickname, if(userId = %s, 1, 0) isAuthor
+                    from posting_comments pc
+                    join users u
+                    on pc.userId = u.id
+                    where postingId = %s
                     limit {}, {};'''.format(offset, limit) 
             
             record = (userId, postingId)
