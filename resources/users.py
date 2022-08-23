@@ -373,7 +373,10 @@ class UserWishlistResource(Resource) :
             connection = get_connection()
 
             query = '''select g.*, wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, wishes.isWish
-                    from goods g,
+                    from 
+                    (select g.*, u.nickname from goods g
+                    join users u
+                    on g.sellerId = u.id) g,
                     (select g.id, count(wl.id) wishCount from goods g
                                             left join wish_lists wl
                                             on g.id = wl.goodsId
