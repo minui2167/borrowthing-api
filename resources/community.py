@@ -1113,6 +1113,25 @@ class PostingLikesResource(Resource) :
             # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
             connection.commit()
 
+            # 2. 쿼리문 만들기
+            query = '''select count(*) likesCount from likes
+                    where postingId = %s
+                    group by postingId;'''            
+            record = (postingId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            likesCount = 0
+            if items :
+                likesCount = items[0]["likesCount"]
+
+            
 
             # 6. 자원 해제
             cursor.close()
@@ -1124,7 +1143,8 @@ class PostingLikesResource(Resource) :
             connection.close()
             return {"error" : str(e)}, 503
         
-        return {"result" : "success"}, 200
+        return {"result" : "success",
+                "likesCount" : likesCount}, 200
 
     # 커뮤니티 게시글 좋아요 해제
     @jwt_required()
@@ -1157,6 +1177,24 @@ class PostingLikesResource(Resource) :
             # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
             connection.commit()
 
+            # 2. 쿼리문 만들기
+            query = '''select count(*) likesCount from likes
+                    where postingId = %s
+                    group by postingId;'''            
+            record = (postingId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query,record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            likesCount = 0
+            if items :
+                likesCount = items[0]["likesCount"]
+
             # 6. 자원 해제
             cursor.close()
             connection.close()
@@ -1166,7 +1204,8 @@ class PostingLikesResource(Resource) :
             connection.close()
             return {"error" : str(e)}, 503
 
-        return {'result' : 'success'}, 200
+        return {"result" : "success",
+                "likesCount" : likesCount}, 200
 
     # 커뮤니티 게시글 좋아요 누른 사람 목록
     def get(self, postingId) :
