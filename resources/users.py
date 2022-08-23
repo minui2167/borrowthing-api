@@ -167,7 +167,8 @@ class UserLoginResource(Resource) :
         accessToken = create_access_token( user_info['id'])
 
         return {'result' : 'success', 
-                'accessToken' : accessToken}, 200
+                'accessToken' : accessToken,
+                'nickname' : user_info['nickname']}, 200
 
 jwt_blacklist = set()
 class UserLogoutResource(Resource) :
