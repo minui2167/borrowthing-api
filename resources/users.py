@@ -500,7 +500,10 @@ class UserLikesPostingResource(Resource) :
 
             # 게시글 가져오기         
             query = '''select p.* , likesCount.likesCount, commentCount.commentCount, imgCount.imgCount, likes.isLike
-                        from posting p,
+                        from 
+                        (select p.*, u.nickname from posting p
+                        join users u
+                        on p.userId = u.id) p,
                         (select p.id, count(l.id) likesCount from posting p
                         left join likes l
                         on p.id = l.postingId
@@ -615,23 +618,49 @@ class UserSaleResource(Resource) :
 
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
-            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
-                        from goods g,
-                        (select g.id, count(wl.id) wishCount from goods g
-                                                left join wish_lists wl
-                                                on g.id = wl.goodsId
-                                                group by g.id) wishCount,
-                        (select g.id, count(gc.id) commentCount from goods g
-                                                left join goods_comments gc
-                                                on g.id = gc.goodsId
-                                                group by g.id) commentCount,
-                        (select g.id, count(gi.id) imgCount from goods g
-                                                left join goods_image gi
-                                                on g.id = gi.goodsId
-                                                group by g.id) imgCount
-                        where g.sellerId = %s and g.status = {} and g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id 
-                        order by g.updatedAt desc
-                        limit {}, {};'''.format(status, offset, limit) 
+            if int(status) == 0 :
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
+                            from goods g,
+                            (select g.id, count(wl.id) wishCount from goods g
+                                                    left join wish_lists wl
+                                                    on g.id = wl.goodsId
+                                                    group by g.id) wishCount,
+                            (select g.id, count(gc.id) commentCount from goods g
+                                                    left join goods_comments gc
+                                                    on g.id = gc.goodsId
+                                                    group by g.id) commentCount,
+                            (select g.id, count(gi.id) imgCount from goods g
+                                                    left join goods_image gi
+                                                    on g.id = gi.goodsId
+                                                    group by g.id) imgCount
+                            where g.sellerId = %s and g.status = {} and g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id 
+                            order by g.updatedAt desc
+                            limit {}, {};'''.format(status, offset, limit) 
+            elif int(status) == 1 or int(status) == 2 :
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
+                            from 
+                            (select g.*, b.buyerId, u.nickname from goods g
+                                                    join buy b
+                                                    on g.id = b.goodsId
+                                                    join users u
+                                                    on b.buyerId = u.id) g,
+                            (select g.id, count(wl.id) wishCount from goods g
+                                                    left join wish_lists wl
+                                                    on g.id = wl.goodsId
+                                                    group by g.id) wishCount,
+                            (select g.id, count(gc.id) commentCount from goods g
+                                                    left join goods_comments gc
+                                                    on g.id = gc.goodsId
+                                                    group by g.id) commentCount,
+                            (select g.id, count(gi.id) imgCount from goods g
+                                                    left join goods_image gi
+                                                    on g.id = gi.goodsId
+                                                    group by g.id) imgCount
+                            where g.sellerId = %s and g.status = {} and g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id 
+                            order by g.updatedAt desc
+                            limit {}, {};'''.format(status, offset, limit)   
+            else :
+                return {"error" : "허용되지 않은 status 값 입니다."}, 200                                                        
             record = (userId, )
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
@@ -893,7 +922,9 @@ class UserBuyResource(Resource) :
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             if int(status) == 1 :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish
-                        from (select g.* from goods g
+                        from (select g.*, u.nickname from goods g
+												join users u
+                                                on g.sellerId = u.id
                                                 left join buy b
                                                 on g.id = b.goodsId 
                                                 where b.buyerId = %s and g.status = {}) g,
@@ -918,7 +949,9 @@ class UserBuyResource(Resource) :
                         limit {}, {};'''.format(status, offset, limit) 
             elif int(status) == 2 :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish
-                        from (select g.*, ei.authorId, ei.score from goods g
+                        from (select g.*, u.nickname, ei.authorId, ei.score from goods g
+                                                join users u
+                                                on g.sellerId = u.id
                                                 left join buy b
                                                 on g.id = b.goodsId 
                                                 left join evaluation_items ei
