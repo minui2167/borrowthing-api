@@ -25,19 +25,26 @@ class GoodsListResource(Resource) :
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
-                        from goods g,
-                        (select g.id, count(wl.id) wishCount from goods g
-                                                left join wish_lists wl
-                                                on g.id = wl.goodsId
-                                                group by g.id) wishCount,
-                        (select g.id, count(gc.id) commentCount from goods g
-                                                left join goods_comments gc
-                                                on g.id = gc.goodsId
-                                                group by g.id) commentCount,
-                        (select g.id, count(gi.id) imgCount from goods g
-                                                left join goods_image gi
-                                                on g.id = gi.goodsId
-                                                group by g.id) imgCount
+                        from 
+                        (select g.*, u.nickname 
+                        from goods g
+                        join users u
+                        on g.sellerId = u.id) g,
+                        (select g.id, count(wl.id) wishCount 
+                        from goods g
+                        left join wish_lists wl
+                        on g.id = wl.goodsId
+                        group by g.id) wishCount,
+                        (select g.id, count(gc.id) commentCount 
+                        from goods g
+                        left join goods_comments gc
+                        on g.id = gc.goodsId
+                        group by g.id) commentCount,
+                        (select g.id, count(gi.id) imgCount 
+                        from goods g
+                        left join goods_image gi
+                        on g.id = gi.goodsId
+                        group by g.id) imgCount
                         where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id
                         order by g.updatedAt desc
                         limit {}, {};'''.format(offset, limit) 
@@ -401,8 +408,10 @@ class GoodsListInAreaResource(Resource) :
 
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
-            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish
-                    from (select g.* from goods g
+            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
+                    from (select g.*, u.nickname from goods g
+                    join users u
+                    on g.sellerId = u.id
                     join activity_areas aaseller
                     on g.sellerId = aaseller.userId
                     join area_distances ad
@@ -431,7 +440,7 @@ class GoodsListInAreaResource(Resource) :
                     order by g.updatedAt desc
                     limit {}, {};'''.format(offset, limit) 
 
-            record = (userId, userId)
+            record = (userId, userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
