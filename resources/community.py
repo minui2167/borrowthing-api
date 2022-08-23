@@ -289,6 +289,7 @@ class LoginStatusPostingListResource(Resource) :
 
             # 게시글 가져오기         
             query = '''select p.* , likesCount.likesCount, commentCount.commentCount, imgCount.imgCount, isLike.isLike
+                        ,if(p.userId = %s, 1, 0) isAuthor
                         from 
                         (select p.*, u.nickname from posting p
                         join users u
@@ -315,7 +316,7 @@ class LoginStatusPostingListResource(Resource) :
                         order by p.createdAt desc
                         limit {}, {};'''.format(offset, limit)
 
-            record = (userId, )
+            record = (userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
@@ -723,7 +724,8 @@ class LoginStatusPostingInfoResource(Resource) :
                                     left join likes l
                                     on p.id = l.postingId and l.userId = %s
                                     where p.id = %s
-                    ) isLike
+                    ) isLike,
+                    if(p.userId = %s, 1, 0) isAuthor
                     from 
                     (select p.*, u.nickname from posting p
                     join users u
@@ -732,7 +734,7 @@ class LoginStatusPostingInfoResource(Resource) :
                     on p.id = pi.postingId
                     group by p.id
                     having p.id = %s;'''            
-            record = (postingId, postingId, userId, postingId, postingId)
+            record = (postingId, postingId, userId, postingId, userId, postingId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
