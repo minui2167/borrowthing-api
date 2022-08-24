@@ -7,6 +7,8 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 import boto3
 import requests
 from config import Config
+import pandas as pd
+
 
 class GoodsListResource(Resource) :
     # 빌려주기 글 목록 리스트
@@ -1835,7 +1837,229 @@ class GoodsRecommendResource(Resource) :
      @jwt_required()
      # 추천하는 빌려주기 글 가져오기
      def get(self) :
-        pass
+        userId = get_jwt_identity()
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
+        # 2. 추천을 위한 상관계수를 위해, 데이터베이스에서
+        # 3. 이 유저의 별점 정보를, 디비에서 가져온다. 
+        try :
+            connection = get_connection()
+
+            # 작성자와 게시글이 유효한지 확인한다.
+            query = '''select * from evaluation_items
+                    where authorId = %s;'''
+            record = (userId, )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 3 :
+                cursor.close()
+                connection.close()
+                return {'error' : '리뷰를 남긴 횟수가 3회 미만입니다.'}, 200
+
+            # 전체 물품별, 별점 평균 리스트
+            query = '''select ei.authorId, ei.goodsId, ei.score, g.sellerId 
+                from evaluation_items ei
+                join goods g
+                on ei.goodsId = g.id;'''
+                       
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            sellerList = cursor.fetchall()
+            
+            cursor.close()
+
+            # 유저 별점 리스트
+            query = '''select ei.authorId, ei.goodsId, ei.score, g.sellerId 
+                from evaluation_items ei
+                join goods g
+                on ei.goodsId = g.id and ei.authorId = %s;'''
+            
+            record = (userId,)
+
+            # select 문은, dictionary = True 를 해준다.
+            cursor = connection.cursor(dictionary = True)
+
+            cursor.execute(query, record)
+
+            # select 문은, 아래 함수를 이용해서, 데이터를 가져온다.
+            items = cursor.fetchall()
+
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+
+            return {"error" : str(e), 'error_no' : 20}, 503
+
+        # 피봇 테이블 한 후
+        # 상관계수 매트릭스로 만들기
+        seller_rating_df = pd.DataFrame(sellerList)
+        matrix = seller_rating_df.pivot_table(values = 'score', index = 'authorId', columns = 'sellerId', aggfunc = 'mean')
+        df = matrix.corr()            
+
+        # 디비로 부터 가져온, 내 별점 정보를, 데이터프레임으로
+        # 만들어 준다.
+        df_my_rating = pd.DataFrame(data=items)
+
+        # 추천 판매자를 저장할, 빈 데이터프레임 만든다.
+        similar_seller_list = pd.DataFrame()
+
+        for i in range(  len(df_my_rating)  ) :
+            similar_seller = df[df_my_rating['sellerId'][i]].dropna().sort_values(ascending=False).to_frame()
+            similar_seller.columns = ['Correlation']
+            similar_seller['weight'] = df_my_rating['score'][i] * similar_seller['Correlation']
+            similar_seller_list = pd.concat([similar_seller_list, similar_seller])
+
+
+        # weight 순으로 정렬한다.
+        similar_seller_list.reset_index(inplace=True)
+
+        similar_seller_list = similar_seller_list.groupby('sellerId')['weight'].max().sort_values(ascending=False)
+
+        similar_seller_list = similar_seller_list.reset_index()
+
+        recommened_seller_list = similar_seller_list['sellerId'].to_list()
+
+        print(recommened_seller_list)
+
+        # 본인이 판매자면 제거
+        if userId in recommened_seller_list :
+            recommened_seller_list.remove(userId)
+
+        # 판매자 리스트가 3명 보다 많으면 3명 까지만 사용
+        if len(recommened_seller_list) > 3 :
+            recommened_seller_list = recommened_seller_list[:2+1]
+        
+
+        if offset is None or limit is None :
+            return {'error' : '쿼리스트링 셋팅해 주세요.',
+                    'error_no' : 123}, 400
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 게시글 가져오기
+            # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
+            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
+                    from (select g.*, u.nickname, ea.name emdName
+                        from goods g
+                        join users u
+                        on g.sellerId = u.id
+                        join activity_areas aa
+                        on u.id = aa.userId
+                        join emd_areas ea
+                        on aa.emdId = ea.id) g,
+                    (select g.id, count(wl.id) wishCount from goods g
+                                            left join wish_lists wl
+                                            on g.id = wl.goodsId
+                                            group by g.id) wishCount,
+                    (select g.id, count(gc.id) commentCount from goods g
+                                            left join goods_comments gc
+                                            on g.id = gc.goodsId
+                                            group by g.id) commentCount,
+                    (select g.id, count(gi.id) imgCount from goods g
+                                            left join goods_image gi
+                                            on g.id = gi.goodsId
+                                            group by g.id) imgCount,
+                    (select g.*, if(wl.userId is null, 0, 1) isWish
+                                            from goods g
+                                            left join wish_lists wl
+                                            on g.id = wl.goodsId and wl.userId = %s
+                                            group by g.id) isWish                     
+                    where (g.sellerId = {} or g.sellerId = {} or g.sellerId = {}) and g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id and g.status = 0
+                    order by g.createdAt desc
+                    limit {}, {};'''.format(recommened_seller_list[0], recommened_seller_list[1], recommened_seller_list[2], offset, limit) 
+
+            record = (userId, userId)
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+            
+            # 중요! 디비에서 가져온 timestamp는 
+            # 파이썬의 datetime 으로 자동 변경된다.
+            # 문제는 이 데이터를 json으로 바로 보낼 수 없으므로,
+            # 문자열로 바꿔서 다시 저장해서 보낸다.
+            i=0         
+            selectedId = []
+            for record in items :
+                items[i]['createdAt'] = record['createdAt'].isoformat()
+                items[i]['updatedAt'] = record['updatedAt'].isoformat()
+                selectedId.append(record['id'])
+                i = i+1
+
+            itemImages = []
+            itemTags = []
+            # 게시글 사진 가져오기
+            for id in selectedId :
+                query = '''
+                select i.imageUrl
+                from images i
+                join goods_image gi
+                    on i.id = gi.imageId
+                where gi.goodsId = {};'''.format(id)
+
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                images = cursor.fetchall()
+                itemImages.append(images)
+
+
+                query = '''select tn.name tagName from tags t
+                        join tag_name tn
+                        on t.tagNameId = tn.id
+                        where goodsId = {};'''.format(id)
+                # 3. 커서를 가져온다.
+                # select를 할 때는 dictionary = True로 설정한다.
+                cursor = connection.cursor(dictionary = True)
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query,)
+
+                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                tags = cursor.fetchall()
+                itemTags.append(tags)
+            i=0
+            for record in items :
+                items[i]['imgUrl'] = itemImages[i]
+                items[i]['tag'] = itemTags[i]
+                i += 1
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+        return {'result' : 'success' ,
+                "count" : len(items),
+                "items" : items}, 200
 
 class GoodsDealResource(Resource) :
     @jwt_required()
