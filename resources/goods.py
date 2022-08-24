@@ -26,10 +26,14 @@ class GoodsListResource(Resource) :
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
                         from 
-                        (select g.*, u.nickname 
+                        (select g.*, u.nickname, ea.name emdName
                         from goods g
                         join users u
-                        on g.sellerId = u.id) g,
+                        on g.sellerId = u.id
+                        join activity_areas aa
+                        on u.id = aa.userId
+                        join emd_areas ea
+                        on aa.emdId = ea.id) g,
                         (select g.id, count(wl.id) wishCount 
                         from goods g
                         left join wish_lists wl
@@ -422,10 +426,14 @@ class LoginStatusGoodsListResource(Resource) :
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
-                    from (select g.*, u.nickname 
+                    from (select g.*, u.nickname, ea.name emdName
                         from goods g
                         join users u
-                        on g.sellerId = u.id) g,
+                        on g.sellerId = u.id
+                        join activity_areas aa
+                        on u.id = aa.userId
+                        join emd_areas ea
+                        on aa.emdId = ea.id) g,
                     (select g.id, count(wl.id) wishCount from goods g
                                             left join wish_lists wl
                                             on g.id = wl.goodsId
