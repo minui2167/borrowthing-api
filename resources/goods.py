@@ -1038,6 +1038,28 @@ class GoodsPostingResource(Resource) :
             # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
 
+            # 댓글 삭제
+            query = '''Delete from goods_comments
+                    where goodsId = %s;'''
+            record = (goodsId, )
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 채팅방 삭제
+            query = '''Delete from chat_room
+                    where goodsId = %s;'''
+            record = (goodsId, )
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
             # 게시글 삭제
             query = '''Delete from goods
                         where id = %s and sellerId = %s;'''                 
