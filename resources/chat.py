@@ -94,13 +94,16 @@ class ChatRoomListResource(Resource) :
             
 
             # 작성자와 게시글이 유효한지 확인한다.
-            query = '''select cr.*, g.title, g.sellerId, buyer.nickname buyerNickname, seller.nickname sellerNickName from chat_room cr
+            query = '''select cr.*, g.title, g.sellerId, buyer.nickname buyerNickname, seller.nickname sellerNickName, cm.senderId, cm.message, cm.updatedAt 
+                    from chat_room cr
                     join users buyer
                     on cr.buyerId = buyer.id
                     join goods g
                     on cr.goodsId = g.id
                     join users seller
                     on g.sellerId = seller.id
+                    left join chat_messages cm
+                    on cr.id = cm.chatRoomId
                     where cr.buyerId = %s or g.sellerId = %s;'''
             record = (userId, userId)
             cursor = connection.cursor(dictionary = True)
@@ -111,7 +114,9 @@ class ChatRoomListResource(Resource) :
             i = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-                items[i]['myId'] = userId
+                if items[i]['updatedAt'] :
+                    items[i]['updatedAt'] = record['updatedAt'].isoformat()
+                
                 i = i+1
             cursor.close()
             connection.close()
@@ -130,12 +135,73 @@ class ChatRoomListResource(Resource) :
 
 
 class ChatResource(Resource) :
-    # 내게 온 메시지 확인
-    @jwt_required()
-    def get(self) :
-        pass
     
-    # 메시지 보내기
-    @jwt_required()
-    def post(self) :
-        pass
+    # 마지막 메시지 저장
+    def post(self, chatRoomId) :
+        data = request.get_json()
+
+        # 게시물 작성
+        # 3. DB에 저장
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()
+            
+
+             
+            # 이미 만들어진 항목이 있는지
+            query = '''select * from chat_messages
+                    where chatRoomId = chatRoomId;'''
+            record = (chatRoomId)
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()
+
+            if len(items) < 1 :           
+                # 2. 쿼리문 만들기
+                query = '''insert into chat_messages
+                        (chatRoomId, senderId, message)
+                        values
+                        (%s, %s, %s);'''
+                        
+                # recode 는 튜플 형태로 만든다.
+                recode = (data['chatRoomId'], data['senderId'], data['message'])
+
+                # 3. 커서를 가져온다.
+                cursor = connection.cursor()
+
+                # 4. 쿼리문을 커서를 이용해서 실행한다.
+                cursor.execute(query, recode)
+
+                # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+                connection.commit()
+
+            # 2. 쿼리문 만들기
+            query = '''update chat_messages
+                    set message = %s
+                    where chatRoomId = %s;'''
+                    
+            # recode 는 튜플 형태로 만든다.
+            recode = (data['message'], data['chatRoomId'])
+
+            # 3. 커서를 가져온다.
+            cursor = connection.cursor()
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, recode)
+
+            # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+            connection.commit()
+
+            
+            cursor.close()
+            connection.close()
+
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+        
+        return {"result" : "succes"}, 200
