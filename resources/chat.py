@@ -11,7 +11,6 @@ class ChatRoomResource(Resource) :
     def post(self, goodsId) :
         userId = get_jwt_identity()
 
-        # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
         # 게시물 작성
         # 3. DB에 저장
         try :
@@ -20,8 +19,11 @@ class ChatRoomResource(Resource) :
             connection = get_connection()
             
 
-            # 작성자와 게시글이 유효한지 확인한다.
-            query = '''select * from chat_room
+             
+            # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
+            query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
+                    join users buyer
+                    on cr.buyerId = buyer.id
                     where buyerId = %s and goodsId = %s;'''
             record = (userId, goodsId)
             cursor = connection.cursor(dictionary = True)
@@ -51,18 +53,20 @@ class ChatRoomResource(Resource) :
                 chatRoomId = cursor.lastrowid
 
                 # 작성자와 게시글이 유효한지 확인한다.
-                query = '''select * from chat_room
+                query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
+                        join users buyer
+                        on cr.buyerId = buyer.id
                         where id = %s;'''
                 record = (chatRoomId, )
                 cursor = connection.cursor(dictionary = True)
                 cursor.execute(query, record)
                 items = cursor.fetchall()
 
+            
             # 6. 자원 해제
             i = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-
                 i = i+1
             cursor.close()
             connection.close()
@@ -90,9 +94,13 @@ class ChatRoomListResource(Resource) :
             
 
             # 작성자와 게시글이 유효한지 확인한다.
-            query = '''select cr.*, g.title, g.sellerId from chat_room cr
+            query = '''select cr.*, g.title, g.sellerId, buyer.nickname buyerNickname, seller.nickname sellerNickName from chat_room cr
+                    join users buyer
+                    on cr.buyerId = buyer.id
                     join goods g
                     on cr.goodsId = g.id
+                    join users seller
+                    on g.sellerId = seller.id
                     where cr.buyerId = %s or g.sellerId = %s;'''
             record = (userId, userId)
             cursor = connection.cursor(dictionary = True)
@@ -103,7 +111,7 @@ class ChatRoomListResource(Resource) :
             i = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
-
+                items[i]['myId'] = userId
                 i = i+1
             cursor.close()
             connection.close()
