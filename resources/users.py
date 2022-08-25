@@ -255,7 +255,7 @@ class UserLocationResource(Resource) :
             cursor.execute(query, record)
             items = cursor.fetchall()
             if not items :
-                return {"error" : "지원하는 지역이 아닙니다."}, 200
+                return {"error" : "지원하는 지역이 아닙니다."}, 400
             sidoId = items[0]['id']
 
             # 시, 군, 구 찾기
@@ -267,7 +267,7 @@ class UserLocationResource(Resource) :
             items = cursor.fetchall()
 
             if not items :
-                return {"error" : "지원하는 지역이 아닙니다."}, 200
+                return {"error" : "지원하는 지역이 아닙니다."}, 400
             siggId = items[0]['id']
             # 읍, 면, 동 찾기
             query = '''select * from emd_areas
@@ -278,7 +278,7 @@ class UserLocationResource(Resource) :
             items = cursor.fetchall()
 
             if not items :
-                return {"error" : "지원하는 지역이 아닙니다."}, 200
+                return {"error" : "지원하는 지역이 아닙니다."}, 400
             emdId = items[0]['id']
 
             
@@ -607,11 +607,11 @@ class UserSaleResource(Resource) :
         status = request.args.get('status') 
         if offset is None or limit is None :
             return {'error' : '쿼리스트링 셋팅해 주세요.',
-                    'error_no' : 123}, 200
+                    'error_no' : 123}, 400
 
         if status is None or int(status) > 2 or int(status) < 0:
             return {'error' : 'status를 제대로 셋팅해 주세요.',
-                    'error_no' : 123}, 200                    
+                    'error_no' : 123}, 400                    
         try :
             # 1. DB에 연결
             connection = get_connection()   
@@ -660,7 +660,7 @@ class UserSaleResource(Resource) :
                             order by g.updatedAt desc
                             limit {}, {};'''.format(status, offset, limit)   
             else :
-                return {"error" : "허용되지 않은 status 값 입니다."}, 200                                                        
+                return {"error" : "허용되지 않은 status 값 입니다."}, 400                                                    
             record = (userId, )
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
@@ -978,7 +978,7 @@ class UserBuyResource(Resource) :
                         limit {}, {};'''.format(status, offset, limit)
                 
             else :
-                return {"error" : "허용되지 않은 status 값 입니다."}, 200                        
+                return {"error" : "허용되지 않은 status 값 입니다."}, 400                        
             record = (userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
