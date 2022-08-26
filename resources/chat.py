@@ -146,26 +146,24 @@ class ChatResource(Resource) :
             # 데이터 insert
             # 1. DB에 연결
             connection = get_connection()
-            
 
              
             # 이미 만들어진 항목이 있는지
             query = '''select * from chat_messages
-                    where chatRoomId = chatRoomId;'''
-            record = (chatRoomId)
+                    where chatRoomId = %s;'''
+            record = (chatRoomId, )
             cursor = connection.cursor(dictionary = True)
             cursor.execute(query, record)
             items = cursor.fetchall()
-
             if len(items) < 1 :           
                 # 2. 쿼리문 만들기
                 query = '''insert into chat_messages
-                        (chatRoomId, senderId, message)
+                        (chatRoomId, senderId, message, updatedAt)
                         values
-                        (%s, %s, %s);'''
+                        (%s, %s, %s, %s);'''
                         
                 # recode 는 튜플 형태로 만든다.
-                recode = (data['chatRoomId'], data['senderId'], data['message'])
+                recode = (chatRoomId, data['senderId'], data['message'], data['updatedAt'])
 
                 # 3. 커서를 가져온다.
                 cursor = connection.cursor()
@@ -178,11 +176,11 @@ class ChatResource(Resource) :
 
             # 2. 쿼리문 만들기
             query = '''update chat_messages
-                    set message = %s
+                    set message = %s, updatedAt = %s
                     where chatRoomId = %s;'''
                     
             # recode 는 튜플 형태로 만든다.
-            recode = (data['message'], data['chatRoomId'])
+            recode = (data['message'], data['updatedAt'], chatRoomId)
 
             # 3. 커서를 가져온다.
             cursor = connection.cursor()
