@@ -36,7 +36,7 @@ api.add_resource(UserLocationResource, '/users/location')
 api.add_resource(UserCommunityCommentResource, '/users/community/comment')
 api.add_resource(UserGoodsCommentResource, '/users/goods/comment')
 api.add_resource(UserActivityAreaResource, '/users/location/distance')
-api.add_resource(UserNotRatingBuyResource, 'users/buy/notrating')
+api.add_resource(UserNotRatingBuyResource, '/users/buy/notrating')
 
 
 # goods

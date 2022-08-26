@@ -1088,7 +1088,7 @@ class UserNotRatingBuyResource(Resource) :
                                             on g.id = b.goodsId 
                                             left join evaluation_items ei
                                             on g.id = ei.goodsId
-                                            where b.buyerId = %s and g.status = {}) g,
+                                            where b.buyerId = %s and g.status = 2) g,
                     (select g.id, count(wl.id) wishCount from goods g
                                             left join wish_lists wl
                                             on g.id = wl.goodsId
@@ -1107,7 +1107,7 @@ class UserNotRatingBuyResource(Resource) :
                                             on g.id = wl.goodsId and wl.userId = %s
                                             group by g.id) isWish
                     where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
-                    limit {}, {};'''.format(status, offset, limit)
+                    limit {}, {};'''.format(offset, limit)
                 
                                   
             record = (userId, userId)
@@ -1128,11 +1128,13 @@ class UserNotRatingBuyResource(Resource) :
             i=0         
             selectedId = []
             for record in items :
+                if record['authorId'] :
+                    items.pop(i)
                 items[i]['createdAt'] = record['createdAt'].isoformat()
                 items[i]['updatedAt'] = record['updatedAt'].isoformat()
-                selectedId.append(record['id'])
+                selectedId.append(record['id'])    
                 i = i+1
-
+            print(selectedId)
             itemImages = []
             itemTags = []
             # 게시글 사진 가져오기
