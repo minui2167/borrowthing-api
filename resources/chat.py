@@ -150,7 +150,7 @@ class ChatRoomListResource(Resource) :
             
 
             # 작성자와 게시글이 유효한지 확인한다.
-            query = '''select cr.*, g.title, g.sellerId, buyer.nickname buyerNickname, seller.nickname sellerNickName, cm.senderId, cm.message, cm.updatedAt 
+            query = '''select cr.*, g.title, g.sellerId, buyer.nickname buyerNickname, seller.nickname sellerNickname, cm.senderId, cm.message, cm.updatedAt 
                     from chat_room cr
                     join users buyer
                     on cr.buyerId = buyer.id
