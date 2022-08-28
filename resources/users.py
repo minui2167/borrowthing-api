@@ -623,7 +623,7 @@ class UserSaleResource(Resource) :
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             if int(status) == 0 :
-                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, if(g.sellerId = %s, 1, 0) isAuthor
                             from goods g,
                             (select g.id, count(wl.id) wishCount from goods g
                                                     left join wish_lists wl
@@ -641,7 +641,7 @@ class UserSaleResource(Resource) :
                             order by g.updatedAt desc
                             limit {}, {};'''.format(status, offset, limit) 
             elif int(status) == 1 or int(status) == 2 :
-                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, if(g.sellerId = %s, 1, 0) isAuthor
                             from 
                             (select g.*, b.buyerId, u.nickname from goods g
                                                     join buy b
@@ -665,7 +665,7 @@ class UserSaleResource(Resource) :
                             limit {}, {};'''.format(status, offset, limit)   
             else :
                 return {"error" : "허용되지 않은 status 값 입니다."}, 400                                                    
-            record = (userId, )
+            record = (userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
