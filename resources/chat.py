@@ -10,6 +10,8 @@ class ChatRoomResource(Resource) :
     @jwt_required()
     def post(self, goodsId) :
         userId = get_jwt_identity()
+        
+        type = request.args.get('type')
 
         # 게시물 작성
         # 3. DB에 저장
@@ -19,54 +21,108 @@ class ChatRoomResource(Resource) :
             connection = get_connection()
             
 
-             
-            # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
-            query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
-                    join users buyer
-                    on cr.buyerId = buyer.id
-                    where buyerId = %s and goodsId = %s;'''
-            record = (userId, goodsId)
-            cursor = connection.cursor(dictionary = True)
-            cursor.execute(query, record)
-            items = cursor.fetchall()
-
-            if len(items) < 1 :           
-                # 2. 쿼리문 만들기
-                query = '''insert into chat_room
-                        (goodsId, buyerId)
-                        values
-                        (%s, %s);'''
-                        
-                # recode 는 튜플 형태로 만든다.
-                recode = (goodsId, userId)
-
-                # 3. 커서를 가져온다.
-                cursor = connection.cursor()
-
-                # 4. 쿼리문을 커서를 이용해서 실행한다.
-                cursor.execute(query, recode)
-
-                # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
-                connection.commit()
-
-                # 이 포스팅의 아이디 값을 가져온다.
-                chatRoomId = cursor.lastrowid
-
-                # 작성자와 게시글이 유효한지 확인한다.
-                query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
-                        join users buyer
-                        on cr.buyerId = buyer.id
-                        where id = %s;'''
-                record = (chatRoomId, )
+            if(type == "seller") :
+                # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
+                query = '''select cr.* from chat_room cr
+                        join buy b
+                        on cr.goodsId = b.goodsId and cr.buyerId = b.buyerId
+                        join goods g
+                        on b.goodsId = g.id
+                        where g.sellerId = %s and g.id = %s;'''
+                record = (userId, goodsId)
                 cursor = connection.cursor(dictionary = True)
                 cursor.execute(query, record)
                 items = cursor.fetchall()
+
+                if len(items) < 1 :
+                    query = '''select * from buy
+                            where goodsId = %s;'''
+                    
+                    record = (goodsId, )
+                    cursor = connection.cursor(dictionary = True)
+                    cursor.execute(query, record)
+                    items = cursor.fetchall()
+                    
+                    # 2. 쿼리문 만들기
+                    query = '''insert into chat_room
+                            (goodsId, buyerId)
+                            values
+                            (%s, %s);'''
+                            
+                    # recode 는 튜플 형태로 만든다.
+                    recode = (goodsId, items[0]['buyerId'])
+
+                    # 3. 커서를 가져온다.
+                    cursor = connection.cursor()
+
+                    # 4. 쿼리문을 커서를 이용해서 실행한다.
+                    cursor.execute(query, recode)
+
+                    # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+                    connection.commit()
+
+                    # 이 포스팅의 아이디 값을 가져온다.
+                    chatRoomId = cursor.lastrowid
+
+                    # 작성자와 게시글이 유효한지 확인한다.
+                    query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
+                            join users buyer
+                            on cr.buyerId = buyer.id
+                            where cr.id = %s;'''
+                    record = (chatRoomId, )
+                    cursor = connection.cursor(dictionary = True)
+                    cursor.execute(query, record)
+                    items = cursor.fetchall()
+            
+            if(type == "buyer") :
+                # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
+                query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
+                        join users buyer
+                        on cr.buyerId = buyer.id
+                        where buyerId = %s and goodsId = %s;'''
+                record = (userId, goodsId)
+                cursor = connection.cursor(dictionary = True)
+                cursor.execute(query, record)
+                items = cursor.fetchall()
+
+                if len(items) < 1 :           
+                    # 2. 쿼리문 만들기
+                    query = '''insert into chat_room
+                            (goodsId, buyerId)
+                            values
+                            (%s, %s);'''
+                            
+                    # recode 는 튜플 형태로 만든다.
+                    recode = (goodsId, userId)
+
+                    # 3. 커서를 가져온다.
+                    cursor = connection.cursor()
+
+                    # 4. 쿼리문을 커서를 이용해서 실행한다.
+                    cursor.execute(query, recode)
+
+                    # 5. 커넥션을 커밋해줘야 한다 => 디비에 영구적으로 반영하라는 뜻
+                    connection.commit()
+
+                    # 이 포스팅의 아이디 값을 가져온다.
+                    chatRoomId = cursor.lastrowid
+
+                    # 작성자와 게시글이 유효한지 확인한다.
+                    query = '''select cr.*, buyer.nickname buyerNickname from chat_room cr
+                            join users buyer
+                            on cr.buyerId = buyer.id
+                            where cr.id = %s;'''
+                    record = (chatRoomId, )
+                    cursor = connection.cursor(dictionary = True)
+                    cursor.execute(query, record)
+                    items = cursor.fetchall()
 
             
             # 6. 자원 해제
             i = 0
             for record in items :
                 items[i]['createdAt'] = record['createdAt'].isoformat()
+                items[i]['myId'] = userId
                 i = i+1
             cursor.close()
             connection.close()
