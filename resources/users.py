@@ -1128,55 +1128,62 @@ class UserNotRatingBuyResource(Resource) :
             i=0         
             selectedId = []
             for record in items :
-                if record['authorId'] :
-                    items.pop(i)
                 items[i]['createdAt'] = record['createdAt'].isoformat()
                 items[i]['updatedAt'] = record['updatedAt'].isoformat()
-                selectedId.append(record['id'])    
+                if not record['authorId'] :
+                    selectedId.append(record['id'])    
                 i = i+1
-            print(selectedId)
-            itemImages = []
-            itemTags = []
-            # 게시글 사진 가져오기
-            for id in selectedId :
-                query = '''
-                select i.imageUrl
-                from images i
-                join goods_image gi
-                    on i.id = gi.imageId
-                where gi.goodsId = {};'''.format(id)
+            
+            selectedItems = [] 
+            if selectedId :        
+                i=0 
+                for record in items :
+                    print("record ID : {}".format(record['id']))                    
+                    if record['id'] in selectedId :
+                        selectedItems.append(record) 
+                    i = i+1
+                itemImages = []
+                itemTags = []
+                # 게시글 사진 가져오기
+                for id in selectedId :
+                    query = '''
+                    select i.imageUrl
+                    from images i
+                    join goods_image gi
+                        on i.id = gi.imageId
+                    where gi.goodsId = {};'''.format(id)
 
-                # 3. 커서를 가져온다.
-                # select를 할 때는 dictionary = True로 설정한다.
-                cursor = connection.cursor(dictionary = True)
+                    # 3. 커서를 가져온다.
+                    # select를 할 때는 dictionary = True로 설정한다.
+                    cursor = connection.cursor(dictionary = True)
 
-                # 4. 쿼리문을 커서를 이용해서 실행한다.
-                cursor.execute(query,)
+                    # 4. 쿼리문을 커서를 이용해서 실행한다.
+                    cursor.execute(query,)
 
-                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
-                images = cursor.fetchall()
-                itemImages.append(images)
+                    # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                    images = cursor.fetchall()
+                    itemImages.append(images)
 
 
-                query = '''select tn.name tagName from tags t
-                        join tag_name tn
-                        on t.tagNameId = tn.id
-                        where goodsId = {};'''.format(id)
-                # 3. 커서를 가져온다.
-                # select를 할 때는 dictionary = True로 설정한다.
-                cursor = connection.cursor(dictionary = True)
+                    query = '''select tn.name tagName from tags t
+                            join tag_name tn
+                            on t.tagNameId = tn.id
+                            where goodsId = {};'''.format(id)
+                    # 3. 커서를 가져온다.
+                    # select를 할 때는 dictionary = True로 설정한다.
+                    cursor = connection.cursor(dictionary = True)
 
-                # 4. 쿼리문을 커서를 이용해서 실행한다.
-                cursor.execute(query,)
+                    # 4. 쿼리문을 커서를 이용해서 실행한다.
+                    cursor.execute(query,)
 
-                # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
-                tags = cursor.fetchall()
-                itemTags.append(tags)
-            i=0
-            for record in items :
-                items[i]['imgUrl'] = itemImages[i]
-                items[i]['tag'] = itemTags[i]
-                i += 1
+                    # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+                    tags = cursor.fetchall()
+                    itemTags.append(tags)
+                i=0
+                for record in selectedItems :
+                    selectedItems[i]['imgUrl'] = itemImages[i]
+                    selectedItems[i]['tag'] = itemTags[i]
+                    i += 1
 
             # 6. 자원 해제
             cursor.close()
@@ -1190,5 +1197,5 @@ class UserNotRatingBuyResource(Resource) :
     
         return {
             "result" : "success",
-            "count" : len(items),
-            "items" : items}, 200
+            "count" : len(selectedItems),
+            "items" : selectedItems}, 200
