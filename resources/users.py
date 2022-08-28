@@ -110,9 +110,12 @@ class UserLoginResource(Resource) :
         try :
             connection = get_connection()
 
-            query = '''select *
-                    from users
-                    where email = %s;'''
+            query = '''select u.*, count(ei.goodsId) ratingCount
+                    from users u
+                    left join evaluation_items ei
+                    on u.id = ei.authorId
+                    where u.email = %s
+                    group by u.id;'''
 
             record = (data['email'] , )
             
@@ -168,7 +171,8 @@ class UserLoginResource(Resource) :
 
         return {'result' : 'success', 
                 'accessToken' : accessToken,
-                'nickname' : user_info['nickname']}, 200
+                'nickname' : user_info['nickname'], 
+                'ratingCount' : user_info['ratingCount']}, 200
 
 jwt_blacklist = set()
 class UserLogoutResource(Resource) :
