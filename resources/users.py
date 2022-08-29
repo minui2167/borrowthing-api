@@ -373,6 +373,9 @@ class UserWishlistResource(Resource) :
         # 1. 클라이언트로부터 데이터를 받아온다.
         userId = get_jwt_identity()
 
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')   
+
         try :
             connection = get_connection()
 
@@ -399,7 +402,8 @@ class UserWishlistResource(Resource) :
                                             on g.id = wl.goodsId and wl.userId = %s
                                             group by g.id) wishes
                     where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = wishes.id and isWish = 1
-                    group by g.id;'''
+                    group by g.id
+                    limit {}, {};'''.format(offset, limit)
             
             record = (userId, )
 
