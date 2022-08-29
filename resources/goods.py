@@ -609,6 +609,9 @@ class GoodsListInAreaResource(Resource) :
     def get(self) :
         offset = request.args.get('offset')
         limit = request.args.get('limit')   
+        sidoId = request.args.get('sidoId')
+        siggId = request.args.get('siggId')
+        emdId = request.args.get('emdId')   
         userId = get_jwt_identity()
         if offset is None or limit is None :
             return {'error' : '쿼리스트링 셋팅해 주세요.',
@@ -617,11 +620,47 @@ class GoodsListInAreaResource(Resource) :
             # 데이터 insert
             # 1. DB에 연결
             connection = get_connection()   
-
-            # 게시글 가져오기
-            # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
-            query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
-                    from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude from goods g
+            if (int(sidoId)==0) and (int(siggId)==0) and (int(emdId)==0) :
+                # 게시글 가져오기
+                # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
+                        from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId from goods g
+                        join users u
+                        on g.sellerId = u.id
+                        join activity_areas aaseller
+                        on g.sellerId = aaseller.userId
+                        join emd_areas ea
+                        on aaseller.emdId = ea.id
+                        join area_distances ad
+                        on aaseller.emdId = ad.goalArea
+                        join activity_areas aabuyer
+                        on aabuyer.userId = %s and aabuyer.emdId = ad.originArea
+                        join sigg_areas sigg
+                        on ea.siggAreaId = sigg.id
+                        where aabuyer.activityMeters >= ad.distance) g,
+                        (select g.id, count(wl.id) wishCount from goods g
+                                                left join wish_lists wl
+                                                on g.id = wl.goodsId
+                                                group by g.id) wishCount,
+                        (select g.id, count(gc.id) commentCount from goods g
+                                                left join goods_comments gc
+                                                on g.id = gc.goodsId
+                                                group by g.id) commentCount,
+                        (select g.id, count(gi.id) imgCount from goods g
+                                                left join goods_image gi
+                                                on g.id = gi.goodsId
+                                                group by g.id) imgCount,
+                        (select g.*, if(wl.userId is null, 0, 1) isWish
+                                                from goods g
+                                                left join wish_lists wl
+                                                on g.id = wl.goodsId and wl.userId = %s
+                                                group by g.id) isWish                     
+                        where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
+                        order by g.createdAt desc
+                        limit {}, {};'''.format(offset, limit) 
+            else :
+                query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
+                    from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId from goods g
                     join users u
                     on g.sellerId = u.id
                     join activity_areas aaseller
@@ -632,6 +671,8 @@ class GoodsListInAreaResource(Resource) :
                     on aaseller.emdId = ad.goalArea
                     join activity_areas aabuyer
                     on aabuyer.userId = %s and aabuyer.emdId = ad.originArea
+                    join sigg_areas sigg
+                    on ea.siggAreaId = sigg.id
                     where aabuyer.activityMeters >= ad.distance) g,
                     (select g.id, count(wl.id) wishCount from goods g
                                             left join wish_lists wl
@@ -650,10 +691,10 @@ class GoodsListInAreaResource(Resource) :
                                             left join wish_lists wl
                                             on g.id = wl.goodsId and wl.userId = %s
                                             group by g.id) isWish                     
-                    where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
+                    where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id and sidoAreaId = {} and siggAreaId = {} and emdId = {}
                     order by g.createdAt desc
-                    limit {}, {};'''.format(offset, limit) 
-
+                    limit {}, {};'''.format(sidoId, siggId, emdId, offset, limit) 
+                
             record = (userId, userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
