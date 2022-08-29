@@ -910,6 +910,57 @@ class UserActivityAreaResource(Resource) :
 
         return {'result' : 'success'}, 200
 
+    # 활동 범위 내에 있는 동네 가져오기
+    @jwt_required()
+    def get(self) :
+        userId = get_jwt_identity()
+        
+        try :
+            # 데이터 insert
+            # 1. DB에 연결
+            connection = get_connection()   
+
+            # 게시글 가져오기
+            # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
+            
+            query = '''select emd.*, sigg.sidoAreaId from area_distances ad
+                join activity_areas aa
+                on ad.originArea = aa.emdId and aa.activityMeters >= ad.distance
+                join emd_areas emd
+                on ad.goalArea = emd.id
+                join sigg_areas sigg
+                on emd.siggAreaId = sigg.id
+                join sido_areas sido
+                on sigg.sidoAreaId = sido.id
+                where aa.userId = %s;'''
+                            
+            record = (userId, )
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            items = cursor.fetchall()
+
+            # 6. 자원 해제
+            cursor.close()
+            connection.close()
+
+        except mysql.connector.Error as e :
+            print(e)
+            cursor.close()
+            connection.close()
+            return {"error" : str(e)}, 503
+    
+        return {
+            "result" : "success",
+            "count" : len(items),
+            "items" : items}, 200
+
+
 class UserBuyResource(Resource) :
     # 구매내역 가져오기
     @jwt_required()
@@ -1207,3 +1258,6 @@ class UserNotRatingBuyResource(Resource) :
             "result" : "success",
             "count" : len(selectedItems),
             "items" : selectedItems}, 200
+
+
+    
