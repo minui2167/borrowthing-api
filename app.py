@@ -4,7 +4,7 @@ from config import Config
 from flask_jwt_extended import JWTManager
 from resources.chat import ChatResource, ChatRoomListResource, ChatRoomResource
 from resources.community import LoginStatusPostingCommentResource, LoginStatusPostingInfoResource, LoginStatusPostingListResource, PostingCommentResource, PostingInfoResource, PostingLikesResource, PostingListResource, PostingCommentInfoResource
-from resources.goods import GoodsCategoryResource, GoodsCommentInfoResource, GoodsCommentResource, GoodsDealResource, GoodsInterestItemResource, GoodsListInAreaResource, GoodsListResource, GoodsPostingResource, GoodsRecommendResource, GoodsReviewResource, LoginStatusGoodsCommentResource, LoginStatusGoodsListResource, LoginStatusGoodsPostingResource
+from resources.goods import GoodsCategoryResource, GoodsCommentInfoResource, GoodsCommentResource, GoodsDealResource, GoodsInterestItemResource, GoodsListInAreaResource, GoodsListResource, GoodsPostingResource, GoodsRecommendResource, GoodsReviewResource, GoodsSearchResource, LoginStatusGoodsCommentResource, LoginStatusGoodsListResource, LoginStatusGoodsPostingResource, LoginStatusGoodsSearchResource
 from resources.users import UserActivityAreaResource, UserBuyResource, UserCommunityCommentResource, UserCommunityListResource, UserEditResource, UserGoodsCommentResource, UserLikesPostingResource, UserLocationResource, UserLoginResource, UserLogoutResource, UserNotRatingBuyResource, UserRegisterResource, UserSaleResource, UserWishlistResource, jwt_blacklist
 
 app = Flask(__name__)
@@ -53,6 +53,8 @@ api.add_resource(GoodsReviewResource, '/evaluation/<int:goodsId>')
 api.add_resource(GoodsInterestItemResource, '/goods/<int:goodsId>/wish')
 api.add_resource(GoodsRecommendResource, '/goods/recommend')
 api.add_resource(GoodsDealResource, '/goods/<int:goodsId>/deal')
+api.add_resource(GoodsSearchResource, '/goods/search')
+api.add_resource(LoginStatusGoodsSearchResource, '/goods/search/login')
 
 # community
 api.add_resource(PostingListResource, '/community')
