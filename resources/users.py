@@ -628,7 +628,14 @@ class UserSaleResource(Resource) :
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             if int(status) == 0 :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, if(g.sellerId = %s, 1, 0) isAuthor
-                            from goods g,
+                            from (select g.*, u.nickname, ea.name emdName
+                            from goods g
+                            join users u
+                            on g.sellerId = u.id
+                            join activity_areas aa
+                            on u.id = aa.userId
+                            join emd_areas ea
+                            on aa.emdId = ea.id) g,
                             (select g.id, count(wl.id) wishCount from goods g
                                                     left join wish_lists wl
                                                     on g.id = wl.goodsId
