@@ -988,12 +988,16 @@ class UserBuyResource(Resource) :
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
             if int(status) == 1 :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish
-                        from (select g.*, u.nickname from goods g
-												join users u
-                                                on g.sellerId = u.id
-                                                left join buy b
-                                                on g.id = b.goodsId 
-                                                where b.buyerId = %s and g.status = {}) g,
+                        from (select g.*, u.nickname, ea.name eamName from goods g
+                                join users u
+                                on g.sellerId = u.id
+                                left join buy b
+                                on g.id = b.goodsId
+                                join activity_areas aa
+                                on u.id = aa.userId
+                                join emd_areas ea
+                                on aa.emdId = ea.id
+                                where b.buyerId = %s and g.status = {}) g,
                         (select g.id, count(wl.id) wishCount from goods g
                                                 left join wish_lists wl
                                                 on g.id = wl.goodsId
