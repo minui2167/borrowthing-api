@@ -654,11 +654,14 @@ class UserSaleResource(Resource) :
             elif int(status) == 1 or int(status) == 2 :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, if(g.sellerId = %s, 1, 0) isAuthor
                             from 
-                            (select g.*, b.buyerId, u.nickname from goods g
-                                                    join buy b
-                                                    on g.id = b.goodsId
-                                                    join users u
-                                                    on b.buyerId = u.id) g,
+                            (select g.*, u.nickname, ea.name emdName
+                            from goods g
+                            join users u
+                            on g.sellerId = u.id
+                            join activity_areas aa
+                            on u.id = aa.userId
+                            join emd_areas ea
+                            on aa.emdId = ea.id) g,
                             (select g.id, count(wl.id) wishCount from goods g
                                                     left join wish_lists wl
                                                     on g.id = wl.goodsId
