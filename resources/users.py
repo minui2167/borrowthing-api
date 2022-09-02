@@ -273,10 +273,11 @@ class UserLocationResource(Resource) :
             if not items :
                 return {"error" : "지원하는 지역이 아닙니다."}, 400
             siggId = items[0]['id']
+
             # 읍, 면, 동 찾기
             query = '''select * from emd_areas
                     where siggAreaId = %s and name = %s;'''
-            record = (sidoId, data['emdName'])
+            record = (siggId, data['emdName'])
             cursor = connection.cursor(dictionary = True)
             cursor.execute(query, record)
             items = cursor.fetchall()
