@@ -1,4 +1,5 @@
 from datetime import datetime
+from pydoc import plain
 from flask_restful import Resource
 from flask import request
 from mysql_connection import get_connection
@@ -619,25 +620,41 @@ class GoodsListInAreaResource(Resource) :
         try :
             # 데이터 insert
             # 1. DB에 연결
-            connection = get_connection()   
+            connection = get_connection()
+            query = '''select activityMeters, latitude, longitude from activity_areas aa
+                    join emd_areas ea
+                    on aa.emdId = ea.id
+                    where userId = %s;
+                    '''
+            record = (userId, )   
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            place = cursor.fetchall()
+            lat = place[0]['latitude']
+            lng = place[0]['longitude']
+            activityMeters = place[0]['activityMeters']
+
             if (int(sidoId)==0) and (int(siggId)==0) and (int(emdId)==0) :
                 # 게시글 가져오기
                 # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
-                        from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId from goods g
-                        join users u
-                        on g.sellerId = u.id
-                        join activity_areas aaseller
-                        on g.sellerId = aaseller.userId
-                        join emd_areas ea
-                        on aaseller.emdId = ea.id
-                        join area_distances ad
-                        on aaseller.emdId = ad.goalArea
-                        join activity_areas aabuyer
-                        on aabuyer.userId = %s and aabuyer.emdId = ad.originArea
-                        join sigg_areas sigg
-                        on ea.siggAreaId = sigg.id
-                        where aabuyer.activityMeters >= ad.distance) g,
+                        from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId, ST_DISTANCE_SPHERE(POINT({}, {}), POINT(ea.longitude, ea.latitude)) as distance 
+                            from goods g
+                            join users u
+                            on g.sellerId = u.id
+                            join activity_areas aaseller
+                            on g.sellerId = aaseller.userId
+                            join emd_areas ea
+                            on aaseller.emdId = ea.id
+                            join sigg_areas sigg
+                            on ea.siggAreaId = sigg.Id
+                            having distance <= {}) g,
                         (select g.id, count(wl.id) wishCount from goods g
                                                 left join wish_lists wl
                                                 on g.id = wl.goodsId
@@ -657,23 +674,56 @@ class GoodsListInAreaResource(Resource) :
                                                 group by g.id) isWish                     
                         where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
                         order by g.createdAt desc
-                        limit {}, {};'''.format(offset, limit) 
+                        limit {}, {};'''.format(lng, lat, activityMeters, offset, limit) 
+
+                # query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
+                #         from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId from goods g
+                #         join users u
+                #         on g.sellerId = u.id
+                #         join activity_areas aaseller
+                #         on g.sellerId = aaseller.userId
+                #         join emd_areas ea
+                #         on aaseller.emdId = ea.id
+                #         join area_distances ad
+                #         on aaseller.emdId = ad.goalArea
+                #         join activity_areas aabuyer
+                #         on aabuyer.userId = %s and aabuyer.emdId = ad.originArea
+                #         join sigg_areas sigg
+                #         on ea.siggAreaId = sigg.id
+                #         where aabuyer.activityMeters >= ad.distance) g,
+                #         (select g.id, count(wl.id) wishCount from goods g
+                #                                 left join wish_lists wl
+                #                                 on g.id = wl.goodsId
+                #                                 group by g.id) wishCount,
+                #         (select g.id, count(gc.id) commentCount from goods g
+                #                                 left join goods_comments gc
+                #                                 on g.id = gc.goodsId
+                #                                 group by g.id) commentCount,
+                #         (select g.id, count(gi.id) imgCount from goods g
+                #                                 left join goods_image gi
+                #                                 on g.id = gi.goodsId
+                #                                 group by g.id) imgCount,
+                #         (select g.*, if(wl.userId is null, 0, 1) isWish
+                #                                 from goods g
+                #                                 left join wish_lists wl
+                #                                 on g.id = wl.goodsId and wl.userId = %s
+                #                                 group by g.id) isWish                     
+                #         where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id
+                #         order by g.createdAt desc
+                #         limit {}, {};'''.format(offset, limit) 
             else :
                 query = '''select g.* , wishCount.wishCount, commentCount.commentCount, imgCount.imgCount, isWish.isWish, if(g.sellerId = %s, 1, 0) isAuthor
-                    from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId from goods g
-                    join users u
-                    on g.sellerId = u.id
-                    join activity_areas aaseller
-                    on g.sellerId = aaseller.userId
-                    join emd_areas ea
-					on aaseller.emdId = ea.id
-                    join area_distances ad
-                    on aaseller.emdId = ad.goalArea
-                    join activity_areas aabuyer
-                    on aabuyer.userId = %s and aabuyer.emdId = ad.originArea
-                    join sigg_areas sigg
-                    on ea.siggAreaId = sigg.id
-                    where aabuyer.activityMeters >= ad.distance) g,
+                    from (select g.*, u.nickname,  ea.name emdName, ea.latitude, ea.longitude, ea.id emdId,ea.siggAreaId, sigg.sidoAreaId, ST_DISTANCE_SPHERE(POINT({}, {}), POINT(ea.longitude, ea.latitude)) as distance 
+                            from goods g
+                            join users u
+                            on g.sellerId = u.id
+                            join activity_areas aaseller
+                            on g.sellerId = aaseller.userId
+                            join emd_areas ea
+                            on aaseller.emdId = ea.id
+                            join sigg_areas sigg
+                            on ea.siggAreaId = sigg.Id
+                            having distance <= {}) g,
                     (select g.id, count(wl.id) wishCount from goods g
                                             left join wish_lists wl
                                             on g.id = wl.goodsId
@@ -693,9 +743,9 @@ class GoodsListInAreaResource(Resource) :
                                             group by g.id) isWish                     
                     where g.id = wishCount.id and g.id = commentCount.id and g.id = imgCount.id and g.id = isWish.id and sidoAreaId = {} and siggAreaId = {} and emdId = {}
                     order by g.createdAt desc
-                    limit {}, {};'''.format(sidoId, siggId, emdId, offset, limit) 
+                    limit {}, {};'''.format(lng, lat, activityMeters, sidoId, siggId, emdId, offset, limit) 
                 
-            record = (userId, userId, userId)
+            record = (userId, userId)
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)

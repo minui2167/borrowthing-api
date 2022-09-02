@@ -932,25 +932,38 @@ class UserActivityAreaResource(Resource) :
 
             # 게시글 가져오기
             # imageCount : 이미지 등록수, wishCount : 관심 등록 수, commentCount : 댓글 등록수
-            
-            query = '''select emd.*, sigg.sidoAreaId from area_distances ad
-                join activity_areas aa
-                on ad.originArea = aa.emdId and aa.activityMeters >= ad.distance
-                join emd_areas emd
-                on ad.goalArea = emd.id
-                join sigg_areas sigg
-                on emd.siggAreaId = sigg.id
-                join sido_areas sido
-                on sigg.sidoAreaId = sido.id
-                where aa.userId = %s;'''
-                            
-            record = (userId, )
+            query = '''select activityMeters, latitude, longitude from activity_areas aa
+                    join emd_areas ea
+                    on aa.emdId = ea.id
+                    where userId = %s;
+                    '''
+            record = (userId, )   
             # 3. 커서를 가져온다.
             # select를 할 때는 dictionary = True로 설정한다.
             cursor = connection.cursor(dictionary = True)
 
             # 4. 쿼리문을 커서를 이용해서 실행한다.
             cursor.execute(query, record)
+
+            # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
+            place = cursor.fetchall()
+            lat = place[0]['latitude']
+            lng = place[0]['longitude']
+            activityMeters = place[0]['activityMeters']
+
+            query = '''select emd.*, sigg.sidoAreaId, ST_DISTANCE_SPHERE(POINT({}, {}), POINT(emd.longitude, emd.latitude)) as distance
+                from emd_areas emd
+                join sigg_areas sigg
+                on emd.siggAreaId = sigg.id
+                having distance <= {};'''.format(lng, lat, activityMeters)
+                            
+            
+            # 3. 커서를 가져온다.
+            # select를 할 때는 dictionary = True로 설정한다.
+            cursor = connection.cursor(dictionary = True)
+
+            # 4. 쿼리문을 커서를 이용해서 실행한다.
+            cursor.execute(query, )
 
             # 5. select 문은, 아래 함수를 이용해서, 데이터를 받아온다.
             items = cursor.fetchall()
