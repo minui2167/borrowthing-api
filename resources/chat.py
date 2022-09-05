@@ -23,9 +23,11 @@ class ChatRoomResource(Resource) :
 
             if(type == "seller") :
                 # goodsId와 buyerId가 일치하는 채팅방이 있는지 확인
-                query = '''select cr.* from chat_room cr
+                query = '''select cr.*, u.nickname buyerNickname from chat_room cr
                         join buy b
                         on cr.goodsId = b.goodsId and cr.buyerId = b.buyerId
+                        join users u
+                        on b.buyerId = u.id
                         join goods g
                         on b.goodsId = g.id
                         where g.sellerId = %s and g.id = %s;'''
