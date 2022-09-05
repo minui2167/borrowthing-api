@@ -891,7 +891,19 @@ class UserActivityAreaResource(Resource) :
 
             # 데이터 Update
             # 1. DB에 연결
-            connection = get_connection()            
+            connection = get_connection()
+
+            # 만약 동네인증이 안된 유저면 에러 반환
+            
+            query = '''select * from activity_areas
+                    where userId = %s;'''
+            record = (userId, )
+            cursor = connection.cursor(dictionary = True)
+            cursor.execute(query, record)
+            items = cursor.fetchall()            
+
+            if len(items) < 1 :
+                return {"error" : "동네 설정을 해주세요."}, 400
             
 
             # 2. 쿼리문 만들기
