@@ -12,6 +12,10 @@
 # 링크
 화면 기획서 https://ovenapp.io/view/u1ZkZfTq7v0azjJtlz4rzd1S4PFJ5naq/
 
+테이블 설계 https://www.erdcloud.com/d/3QCRygW5Qz6w3GpNg
+
+api 명세서 https://documenter.getpostman.com/view/21511147/2s7YYvYh2N#9e94f09e-a754-4b1c-af91-4c17c2e9a3ad
+
 백엔드 https://github.com/minui2167/borrowthing-api
 
 프로젝트 기술서 https://docs.google.com/presentation/d/15yKXrdb2PNRY0wdAfW44BdoLkQrm7dOV364fXK7g31s/edit#slide=id.g15ad89239a6_0_411
